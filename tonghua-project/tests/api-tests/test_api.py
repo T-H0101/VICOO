@@ -172,20 +172,22 @@ class TestArtworkList:
         if response.status_code == 200:
             body = response.json()
             assert "data" in body
-            assert "meta" in body
+            assert "total" in body
+            assert "page" in body
+            assert "page_size" in body
             assert isinstance(body["data"], list)
 
     @pytest.mark.asyncio
     async def test_list_pagination(self, client: AsyncClient, no_auth_headers):
         """Pagination parameters are respected."""
         response = await client.get(
-            "/api/v1/artworks", params={"page": 2, "per_page": 5}, headers=no_auth_headers
+            "/api/v1/artworks", params={"page": 2, "page_size": 5}, headers=no_auth_headers
         )
         assert response.status_code in (200, 404, 500)
         if response.status_code == 200:
-            meta = response.json().get("meta", {})
-            assert meta.get("page") == 2
-            assert meta.get("per_page") == 5
+            body = response.json()
+            assert body.get("page") == 2
+            assert body.get("page_size") == 5
 
     @pytest.mark.asyncio
     async def test_list_filter_by_campaign(self, client: AsyncClient, no_auth_headers):
@@ -501,6 +503,33 @@ class TestDonationInitiate:
         )
         assert response.status_code in (400, 422, 404, 500)
 
+    @pytest.mark.asyncio
+    async def test_initiate_duplicate(self, client: AsyncClient, auth_headers):
+        """Duplicate donation payload should succeed (creates new donation record)."""
+        payload = {
+            "donor_name": "Test User",
+            "amount": 100.00,
+            "currency": "CNY",
+            "message": "For the children!",
+            "is_anonymous": False,
+            "payment_method": "stripe",
+        }
+        # First request
+        response1 = await client.post(
+            "/api/v1/donations", json=payload, headers=auth_headers
+        )
+        assert response1.status_code in (201, 404, 500)
+
+        # Second request (duplicate)
+        response2 = await client.post(
+            "/api/v1/donations", json=payload, headers=auth_headers
+        )
+        # Should succeed (201) or handle gracefully
+        assert response2.status_code in (201, 404, 500)
+        if response2.status_code == 201:
+            data = response2.json()["data"]
+            assert "id" in data
+
 
 class TestDonationDetail:
     """GET /api/v1/donations/{id}"""
@@ -680,6 +709,28 @@ class TestOrderCreate:
         }
         response = await client.post("/api/v1/orders", json=payload, headers=auth_headers)
         assert response.status_code in (400, 422, 404, 500)
+
+    @pytest.mark.asyncio
+    async def test_create_duplicate(self, client: AsyncClient, auth_headers):
+        """Duplicate order payload should succeed (creates new order record)."""
+        payload = {
+            "items": [
+                {"product_id": PRODUCT_ID, "quantity": 2}
+            ],
+            "shipping_address": "Jane Doe, +86-138-0000-0000, 123 Tech Park Road, Shenzhen, Guangdong",
+            "payment_method": "wechat",
+        }
+        # First request
+        response1 = await client.post("/api/v1/orders", json=payload, headers=auth_headers)
+        assert response1.status_code in (201, 404, 500)
+
+        # Second request (duplicate)
+        response2 = await client.post("/api/v1/orders", json=payload, headers=auth_headers)
+        # Should succeed (201) or handle gracefully
+        assert response2.status_code in (201, 404, 500)
+        if response2.status_code == 201:
+            data = response2.json()["data"]
+            assert "id" in data
 
 
 class TestOrderDetail:
@@ -960,7 +1011,7 @@ class TestSQLInjectionSecurity:
             "payment_provider": "stripe",
         }
         response = await client.post(
-            "/api/v1/donations/initiate", json=payload, headers=auth_headers
+            "/api/v1/donations", json=payload, headers=auth_headers
         )
         # Type validation should reject non-numeric amount
         assert response.status_code in (400, 422, 404, 500)
@@ -1061,7 +1112,7 @@ class TestPaymentSecurity:
         """Zero donation amount is rejected."""
         payload = {"amount": 0.00, "currency": "CNY", "payment_provider": "stripe"}
         response = await client.post(
-            "/api/v1/donations/initiate", json=payload, headers=auth_headers
+            "/api/v1/donations", json=payload, headers=auth_headers
         )
         assert response.status_code in (400, 422, 404, 500)
 
