@@ -70,13 +70,14 @@ class DataStoreTokenProvider(
     private var cachedAccessToken: String? = null
     private var cachedRefreshToken: String? = null
 
-    init {
-        // Pre-load tokens from DataStore
-        kotlinx.coroutines.runBlocking {
-            dataStore.data.collect { prefs ->
-                cachedAccessToken = prefs[ACCESS_TOKEN_KEY]
-                cachedRefreshToken = prefs[REFRESH_TOKEN_KEY]
-            }
+    override fun getAccessToken(): String? = cachedAccessToken
+
+    override fun getRefreshToken(): String? = cachedRefreshToken
+
+    override suspend fun initialize() {
+        dataStore.data.collect { prefs ->
+            cachedAccessToken = prefs[ACCESS_TOKEN_KEY]
+            cachedRefreshToken = prefs[REFRESH_TOKEN_KEY]
         }
     }
 

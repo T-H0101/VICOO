@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import org.tonghua.app.ui.theme.*
 import org.tonghua.app.viewmodel.AuthViewModel
 
 /**
@@ -23,6 +22,10 @@ import org.tonghua.app.viewmodel.AuthViewModel
 @Composable
 fun ProfileScreen(
     onLoginClick: () -> Unit,
+    onMyDonationsClick: () -> Unit,
+    onMyOrdersClick: () -> Unit,
+    onMyArtworksClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -38,7 +41,7 @@ fun ProfileScreen(
         Text(
             text = "05",
             style = MaterialTheme.typography.labelLarge,
-            color = DeepSepia,
+            color = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = "Profile",
@@ -48,13 +51,19 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (uiState.isLoggedIn && uiState.user != null) {
-            // Logged in state
-            LoggedInContent(
-                displayName = uiState.user!!.displayName,
-                role = uiState.user!!.role,
-                onLogout = viewModel::logout,
-            )
+        if (uiState.isLoggedIn) {
+            val user = uiState.user
+            if (user != null) {
+                LoggedInContent(
+                    displayName = user.displayName,
+                    role = user.role,
+                    onLogout = viewModel::logout,
+                    onMyDonationsClick = onMyDonationsClick,
+                    onMyOrdersClick = onMyOrdersClick,
+                    onMyArtworksClick = onMyArtworksClick,
+                    onSettingsClick = onSettingsClick,
+                )
+            }
         } else {
             // Not logged in
             LoginPrompt(onLoginClick = onLoginClick)
@@ -67,6 +76,10 @@ private fun LoggedInContent(
     displayName: String,
     role: String,
     onLogout: () -> Unit,
+    onMyDonationsClick: () -> Unit,
+    onMyOrdersClick: () -> Unit,
+    onMyArtworksClick: () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     // User info card
     Card(
@@ -77,14 +90,14 @@ private fun LoggedInContent(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = MaterialTheme.shapes.extraLarge,
-                    color = DeepSepia.copy(alpha = 0.15f),
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.size(56.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = displayName.first().uppercase(),
                             style = MaterialTheme.typography.headlineMedium,
-                            color = DeepSepia,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                 }
@@ -97,7 +110,7 @@ private fun LoggedInContent(
                     Text(
                         text = role.replace("_", " ").uppercase(),
                         style = MaterialTheme.typography.labelMedium,
-                        color = DeepSepia,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -106,28 +119,28 @@ private fun LoggedInContent(
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    // Menu items
+    // Menu items with navigation callbacks
     val menuItems = listOf(
-        Triple(Icons.Outlined.FavoriteBorder, "My Donations", "View donation history"),
-        Triple(Icons.Outlined.ShoppingBag, "My Orders", "Track your orders"),
-        Triple(Icons.Outlined.Palette, "My Artworks", "Submitted artworks"),
-        Triple(Icons.Outlined.Settings, "Settings", "Account preferences"),
+        Triple(Icons.Outlined.FavoriteBorder, "My Donations", onMyDonationsClick),
+        Triple(Icons.Outlined.ShoppingBag, "My Orders", onMyOrdersClick),
+        Triple(Icons.Outlined.Palette, "My Artworks", onMyArtworksClick),
+        Triple(Icons.Outlined.Settings, "Settings", onSettingsClick),
     )
 
-    menuItems.forEach { (icon, title, subtitle) ->
+    menuItems.forEach { (icon, title, onClick) ->
         ListItem(
             headlineContent = {
                 Text(text = title, style = MaterialTheme.typography.titleSmall)
             },
             supportingContent = {
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = SlateGray)
+                Text(text = "Tap to view", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             },
             leadingContent = {
-                Icon(icon, contentDescription = null, tint = DeepSepia)
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             },
-            modifier = Modifier.clickable { /* navigate */ },
+            modifier = Modifier.clickable { onClick() },
         )
-        HorizontalDivider(color = EditorialDivider.copy(alpha = 0.5f))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     }
 
     Spacer(modifier = Modifier.height(24.dp))
@@ -136,7 +149,7 @@ private fun LoggedInContent(
     OutlinedButton(
         onClick = onLogout,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
         Icon(Icons.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
@@ -159,7 +172,7 @@ private fun LoginPrompt(onLoginClick: () -> Unit) {
             Icon(
                 Icons.Outlined.Person,
                 contentDescription = null,
-                tint = DeepSepia,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(64.dp),
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -171,13 +184,13 @@ private fun LoginPrompt(onLoginClick: () -> Unit) {
             Text(
                 text = "Sign in to participate in campaigns, vote for artworks, and track your contributions.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = SlateGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(
                 onClick = onLoginClick,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = DeepSepia),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
                 Text("Sign In")
             }

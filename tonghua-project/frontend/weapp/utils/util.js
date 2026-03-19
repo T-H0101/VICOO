@@ -1,20 +1,20 @@
 function formatDate(date, fmt) {
   var d = new Date(date);
-  fmt = fmt || `yyyy-MM-dd`;
+  fmt = fmt || 'yyyy-MM-dd';
   var y = d.getFullYear();
   var M = d.getMonth() + 1;
   var dd = d.getDate();
-  return y + `-` + (M < 10 ? `0` + M : M) + `-` + (dd < 10 ? `0` + dd : dd);
+  return y + '-' + (M < 10 ? '0' + M : M) + '-' + (dd < 10 ? '0' + dd : dd);
 }
 
 function formatPrice(cents) {
-  return `¥` + (cents / 100).toFixed(2);
+  return '\u00A5' + (cents / 100).toFixed(2);
 }
 
 function formatImageUrl(url, width) {
-  if (\!url) return ``;
-  if (url.indexOf(`http`) === 0) return url;
-  return getApp().globalData.baseUrl + `/uploads/` + url;
+  if (!url) return '';
+  if (url.indexOf('http') === 0) return url;
+  return getApp().globalData.baseUrl + '/uploads/' + url;
 }
 function debounce(fn, delay) {
   var timer = null;

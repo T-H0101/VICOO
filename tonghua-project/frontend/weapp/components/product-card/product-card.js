@@ -4,10 +4,10 @@ Component({
   },
   methods: {
     onTap: function() {
-      this.triggerEvent(`tap`, { id: this.properties.product.id });
+      this.triggerEvent('tap', { id: this.properties.product.id });
     },
     onAddCart: function() {
-      this.triggerEvent(`addcart`, { id: this.properties.product.id });
+      this.triggerEvent('addcart', { id: this.properties.product.id });
     }
   }
 });

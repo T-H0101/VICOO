@@ -5,7 +5,7 @@ import SectionContainer from '@/components/layout/SectionContainer';
 import EditorialHero from '@/components/editorial/EditorialHero';
 import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeading';
 import StoryQuoteBlock from '@/components/editorial/StoryQuoteBlock';
-import DonationPanel from '@/components/common/DonationPanel';
+import DonationPanel from '@/components/editorial/DonationPanel';
 import ImpactCounter from '@/components/editorial/ImpactCounter';
 
 const IMPACT_AREAS = [

@@ -30,9 +30,17 @@ object Routes {
     const val ARTWORK_DETAIL = "artwork/{artworkId}"
     const val PRODUCT_DETAIL = "product/{productId}"
     const val ORDER = "order/{productId}"
+    const val CAMPAIGN_DETAIL = "campaign/{campaignId}"
     const val TRACEABILITY = "traceability/{productId}"
 
+    // Profile menu routes
+    const val MY_DONATIONS = "my-donations"
+    const val MY_ORDERS = "my-orders"
+    const val MY_ARTWORKS = "my-artworks"
+    const val SETTINGS = "settings"
+
     fun artworkDetail(artworkId: String) = "artwork/$artworkId"
+    fun campaignDetail(campaignId: String) = "campaign/$campaignId"
     fun productDetail(productId: String) = "product/$productId"
     fun order(productId: String) = "order/$productId"
     fun traceability(productId: String) = "traceability/$productId"
@@ -107,12 +115,12 @@ fun TonghuaNavGraph() {
             composable(Routes.HOME) {
                 HomeScreen(
                     onArtworkClick = { id -> navController.navigate(Routes.artworkDetail(id)) },
-                    onCampaignClick = { id -> navController.navigate(Routes.artworkDetail(id)) },
+                    onCampaignClick = { id -> navController.navigate(Routes.campaignDetail(id)) },
                 )
             }
             composable(Routes.CAMPAIGNS) {
                 CampaignsScreen(
-                    onCampaignClick = { id -> navController.navigate(Routes.artworkDetail(id)) },
+                    onCampaignClick = { id -> navController.navigate(Routes.campaignDetail(id)) },
                 )
             }
             composable(Routes.SHOP) {
@@ -126,6 +134,30 @@ fun TonghuaNavGraph() {
             composable(Routes.PROFILE) {
                 ProfileScreen(
                     onLoginClick = { navController.navigate(Routes.LOGIN) },
+                    onMyDonationsClick = { navController.navigate(Routes.MY_DONATIONS) },
+                    onMyOrdersClick = { navController.navigate(Routes.MY_ORDERS) },
+                    onMyArtworksClick = { navController.navigate(Routes.MY_ARTWORKS) },
+                    onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                )
+            }
+            composable(Routes.MY_DONATIONS) {
+                MyDonationsScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.MY_ORDERS) {
+                MyOrdersScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.MY_ARTWORKS) {
+                MyArtworksScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.SETTINGS) {
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(Routes.LOGIN) {

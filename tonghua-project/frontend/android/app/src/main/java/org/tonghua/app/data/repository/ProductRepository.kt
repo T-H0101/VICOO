@@ -2,7 +2,10 @@ package org.tonghua.app.data.repository
 
 import org.tonghua.app.data.api.ApiMeta
 import org.tonghua.app.data.api.TonghuaApi
+import org.tonghua.app.data.model.CreateOrderRequest
+import org.tonghua.app.data.model.Order
 import org.tonghua.app.data.model.Product
+import org.tonghua.app.data.model.ShippingAddress
 import org.tonghua.app.data.model.TraceabilityRecord
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,6 +56,30 @@ class ProductRepository @Inject constructor(
                 Result.success(response.body()!!.data?.records ?: emptyList())
             } else {
                 Result.failure(Exception(response.body()?.error?.message ?: "Traceability not found"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createOrder(
+        productId: String,
+        quantity: Int,
+        shippingAddress: ShippingAddress,
+        paymentProvider: String = "wechat",
+    ): Result<Order> {
+        return try {
+            val request = CreateOrderRequest(
+                productId = productId,
+                quantity = quantity,
+                shippingAddress = shippingAddress,
+                paymentProvider = paymentProvider,
+            )
+            val response = api.createOrder(request)
+            if (response.isSuccessful && response.body()?.success == true) {
+                Result.success(response.body()!!.data!!)
+            } else {
+                Result.failure(Exception(response.body()?.error?.message ?: "Order creation failed"))
             }
         } catch (e: Exception) {
             Result.failure(e)

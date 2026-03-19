@@ -1,6 +1,6 @@
-var app = getApp();
-var auth = require("../../../utils/auth.js");
-var util = require("../../../utils/util.js");
+var auth = require('../../../utils/auth');
+var http = require('../../../utils/request');
+var util = require('../../../utils/util');
 
 Page({
   data: {
@@ -15,8 +15,12 @@ Page({
   },
 
   onLoad: function () {
-    if (!auth.ensureLogin()) { return; }
-    this.loadDonations();
+    var self = this;
+    auth.ensureLogin().then(function() {
+      self.loadDonations();
+    }).catch(function() {
+      wx.showToast({ title: '\u8BF7\u5148\u767B\u5F55', icon: 'none' });
+    });
   },
 
   onShow: function () {
@@ -44,56 +48,45 @@ Page({
 
     that.setData({ loading: true });
 
-    wx.request({
-      url: app.globalData.baseUrl + "/api/donations/my",
-      method: "GET",
-      header: {
-        "Authorization": "Bearer " + auth.getToken()
-      },
-      data: {
-        page: that.data.page,
-        pageSize: that.data.pageSize
-      },
-      success: function (res) {
-        if (res.data && res.data.code === 0) {
-          var result = res.data.data;
-          var list = result.list || [];
-          list = list.map(function (item) {
-            item.createdAtFormatted = util.formatDate(item.createdAt);
-            item.amountFormatted = util.formatPrice(item.amount);
-            return item;
-          });
-          var donations = that.data.page === 1 ? list : that.data.donations.concat(list);
-          that.setData({
-            donations: donations,
-            totalAmount: result.totalAmount || 0,
-            totalCount: result.totalCount || donations.length,
-            hasMore: list.length >= that.data.pageSize,
-            page: that.data.page + 1,
-            isEmpty: that.data.page === 1 && list.length === 0
-          });
-        }
-      },
-      fail: function () {
-        wx.showToast({ title: "Failed to load", icon: "none" });
-      },
-      complete: function () {
-        that.setData({ loading: false });
-      }
+    http.get('/donations/my', {
+      page: that.data.page,
+      pageSize: that.data.pageSize
+    }).then(function (res) {
+      var result = res || {};
+      var list = result.list || [];
+      list = list.map(function (item) {
+        item.createdAtFormatted = util.formatDate(item.createdAt);
+        item.amountFormatted = util.formatPrice(item.amount);
+        return item;
+      });
+      var donations = that.data.page === 1 ? list : that.data.donations.concat(list);
+      that.setData({
+        donations: donations,
+        totalAmount: result.totalAmount || 0,
+        totalCount: result.totalCount || donations.length,
+        hasMore: list.length >= that.data.pageSize,
+        page: that.data.page + 1,
+        isEmpty: that.data.page === 1 && list.length === 0
+      });
+    }).catch(function () {
+      // Error toast already shown by centralized request utility
+    }).then(function() {
+      // "finally" — always clear loading
+      that.setData({ loading: false });
     });
   },
 
   handleDonationTap: function (e) {
     var id = e.currentTarget.dataset.id;
-    wx.navigateTo({ url: "/pages/donate/detail/index?id=" + id });
+    wx.navigateTo({ url: '/pages/donate/detail/index?id=' + id });
   },
 
   handleDonateNow: function () {
-    wx.navigateTo({ url: "/pages/donate/index" });
+    wx.navigateTo({ url: '/pages/donate/index' });
   },
 
   handleViewCertificate: function (e) {
     var id = e.currentTarget.dataset.id;
-    wx.navigateTo({ url: "/pages/user/certificate/index?id=" + id });
+    wx.navigateTo({ url: '/pages/user/certificate/index?id=' + id });
   }
 });

@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import org.tonghua.app.ui.theme.*
 import org.tonghua.app.viewmodel.DonateViewModel
 
 /**
@@ -41,7 +40,7 @@ fun DonateScreen(
         Text(
             text = "04",
             style = MaterialTheme.typography.labelLarge,
-            color = DeepSepia,
+            color = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = "Donate",
@@ -52,7 +51,7 @@ fun DonateScreen(
         Text(
             text = "Support children's art education and sustainable fashion",
             style = MaterialTheme.typography.bodyMedium,
-            color = SlateGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -79,11 +78,11 @@ fun DonateScreen(
         uiState.error?.let { error ->
             Spacer(modifier = Modifier.height(16.dp))
             Card(
-                colors = CardDefaults.cardColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
             ) {
                 Text(
                     text = error,
-                    color = ErrorRed,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(16.dp),
                 )
@@ -120,12 +119,12 @@ private fun DonationForm(
                     .weight(1f)
                     .clickable { onAmountChange(amount) },
                 shape = RoundedCornerShape(8.dp),
-                color = if (isSelected) DeepSepia else MaterialTheme.colorScheme.surfaceVariant,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Text(
                     text = amount,
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (isSelected) PaperWhite else CharcoalText,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .padding(vertical = 12.dp)
                         .wrapContentWidth(Alignment.CenterHorizontally),
@@ -170,7 +169,7 @@ private fun DonationForm(
         Checkbox(
             checked = uiState.isAnonymous,
             onCheckedChange = null,
-            colors = CheckboxDefaults.colors(checkedColor = DeepSepia),
+            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary),
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
@@ -203,7 +202,7 @@ private fun DonationForm(
                 .clickable { onProviderSelect(key) }
                 .then(
                     if (isSelected) Modifier.border(
-                        2.dp, DeepSepia, RoundedCornerShape(8.dp)
+                        2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)
                     ) else Modifier
                 ),
             shape = RoundedCornerShape(8.dp),
@@ -217,7 +216,7 @@ private fun DonationForm(
                     Icon(
                         Icons.Filled.Check,
                         contentDescription = null,
-                        tint = DeepSepia,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -225,7 +224,7 @@ private fun DonationForm(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (isSelected) DeepSepia else CharcoalText,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -240,12 +239,12 @@ private fun DonationForm(
             .fillMaxWidth()
             .height(52.dp),
         enabled = !uiState.isLoading && uiState.amount.isNotEmpty(),
-        colors = ButtonDefaults.buttonColors(containerColor = DeepSepia),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         shape = MaterialTheme.shapes.medium,
     ) {
         if (uiState.isLoading) {
             CircularProgressIndicator(
-                color = PaperWhite,
+                color = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(20.dp),
                 strokeWidth = 2.dp,
             )
@@ -253,7 +252,7 @@ private fun DonationForm(
             Text(
                 text = "Donate CNY ${uiState.amount.ifEmpty { "0" }}",
                 style = MaterialTheme.typography.labelLarge,
-                color = PaperWhite,
+                color = MaterialTheme.colorScheme.onPrimary,
             )
         }
     }
@@ -266,7 +265,7 @@ private fun DonationSuccessCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SuccessGreen.copy(alpha = 0.1f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -275,33 +274,33 @@ private fun DonationSuccessCard(
             Icon(
                 Icons.Filled.Check,
                 contentDescription = null,
-                tint = SuccessGreen,
+                tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(48.dp),
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Thank You!",
                 style = MaterialTheme.typography.headlineMedium,
-                color = SuccessGreen,
+                color = MaterialTheme.colorScheme.tertiary,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Your donation has been initiated. A certificate will be generated after payment is confirmed.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = SlateGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             donationId?.let {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Reference: $it",
                     style = MaterialTheme.typography.labelSmall,
-                    color = CaptionGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
                 onClick = onNewDonation,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = DeepSepia),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
             ) {
                 Text("Make Another Donation")
             }

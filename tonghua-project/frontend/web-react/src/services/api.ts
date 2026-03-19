@@ -1,27 +1,32 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL is required. Set it in .env file.');
+}
+
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+function onRefreshed(newToken: string) {
+  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
+  withCredentials: true, // Send httpOnly cookies with every request
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
-// Request interceptor — attach JWT token
-api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // Response interceptor — handle token refresh on 401
 api.interceptors.response.use(
@@ -30,25 +35,33 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      const { refreshToken } = useAuthStore.getState();
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
+      if (isRefreshing) {
+        // Wait for the in-flight refresh to complete
+        return new Promise((resolve) => {
+          addRefreshSubscriber(() => {
+            resolve(api(originalRequest));
           });
-          useAuthStore.getState().login(
-            useAuthStore.getState().user!,
-            data.accessToken,
-            data.refreshToken
-          );
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-          return api(originalRequest);
-        } catch {
-          useAuthStore.getState().logout();
-          window.location.href = '/login';
-        }
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+        isRefreshing = false;
+        onRefreshed('refreshed');
+        return api(originalRequest);
+      } catch {
+        isRefreshing = false;
+        refreshSubscribers = [];
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return Promise.reject(error);
       }
     }
 

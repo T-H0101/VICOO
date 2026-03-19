@@ -6,7 +6,7 @@ import EditorialHero from '@/components/editorial/EditorialHero';
 import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeading';
 import SepiaImageFrame from '@/components/editorial/SepiaImageFrame';
 import StoryQuoteBlock from '@/components/editorial/StoryQuoteBlock';
-import TraceabilityTimeline from '@/components/common/TraceabilityTimeline';
+import TraceabilityTimeline from '@/components/editorial/TraceabilityTimeline';
 import type { SupplyChainRecord } from '@/types';
 
 const MOCK_RECORDS: SupplyChainRecord[] = [

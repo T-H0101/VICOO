@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.tonghua.app.data.model.Product
+import org.tonghua.app.data.model.ShippingAddress
 import org.tonghua.app.data.model.TraceabilityRecord
 import org.tonghua.app.data.repository.ProductRepository
 import javax.inject.Inject
@@ -100,5 +101,36 @@ class ShopViewModel @Inject constructor(
 
     fun refresh() {
         loadProducts(category = _shopState.value.selectedCategory)
+    }
+
+    fun placeOrder(
+        productId: String,
+        recipientName: String,
+        phone: String,
+        addressLine: String,
+        city: String,
+        province: String,
+        postalCode: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val address = ShippingAddress(
+                name = recipientName,
+                phone = phone,
+                province = province,
+                city = city,
+                district = "",
+                address = addressLine,
+                postalCode = postalCode.ifBlank { null },
+            )
+            productRepository.createOrder(
+                productId = productId,
+                quantity = 1,
+                shippingAddress = address,
+            )
+                .onSuccess { onSuccess() }
+                .onFailure { e -> onError(e.message ?: "Order placement failed") }
+        }
     }
 }

@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import FlipPageTransition from '@/components/transitions/FlipPageTransition';
+import ErrorBoundary from '@/components/editorial/ErrorBoundary';
 import Home from '@/pages/Home';
 import About from '@/pages/About';
 import Campaigns from '@/pages/Campaigns';
@@ -18,24 +19,26 @@ function AnimatedRoutes() {
   const location = useLocation();
 
   return (
-    <FlipPageTransition>
-      <Routes location={location} key={location.pathname}>
-        <Route element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="about" element={<About />} />
-          <Route path="campaigns" element={<Campaigns />} />
-          <Route path="campaigns/:id" element={<CampaignDetail />} />
-          <Route path="stories" element={<Stories />} />
-          <Route path="donate" element={<Donate />} />
-          <Route path="shop" element={<Shop />} />
-          <Route path="shop/:id" element={<ProductDetail />} />
-          <Route path="traceability" element={<Traceability />} />
-          <Route path="contact" element={<Contact />} />
-          <Route path="login" element={<Login />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
-    </FlipPageTransition>
+    <ErrorBoundary>
+      <FlipPageTransition>
+        <Routes location={location} key={location.pathname}>
+          <Route element={<Layout />}>
+            <Route index element={<ErrorBoundary><Home /></ErrorBoundary>} />
+            <Route path="about" element={<ErrorBoundary><About /></ErrorBoundary>} />
+            <Route path="campaigns" element={<ErrorBoundary><Campaigns /></ErrorBoundary>} />
+            <Route path="campaigns/:id" element={<ErrorBoundary><CampaignDetail /></ErrorBoundary>} />
+            <Route path="stories" element={<ErrorBoundary><Stories /></ErrorBoundary>} />
+            <Route path="donate" element={<ErrorBoundary><Donate /></ErrorBoundary>} />
+            <Route path="shop" element={<ErrorBoundary><Shop /></ErrorBoundary>} />
+            <Route path="shop/:id" element={<ErrorBoundary><ProductDetail /></ErrorBoundary>} />
+            <Route path="traceability" element={<ErrorBoundary><Traceability /></ErrorBoundary>} />
+            <Route path="contact" element={<ErrorBoundary><Contact /></ErrorBoundary>} />
+            <Route path="login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </FlipPageTransition>
+    </ErrorBoundary>
   );
 }
 

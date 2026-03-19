@@ -7,7 +7,7 @@ import SectionContainer from '@/components/layout/SectionContainer';
 import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeading';
 import SepiaImageFrame from '@/components/editorial/SepiaImageFrame';
 import PaperTextureBackground from '@/components/editorial/PaperTextureBackground';
-import TraceabilityTimeline from '@/components/common/TraceabilityTimeline';
+import TraceabilityTimeline from '@/components/editorial/TraceabilityTimeline';
 import { useCartStore } from '@/stores/cartStore';
 import type { Product, SupplyChainRecord } from '@/types';
 
@@ -140,6 +140,7 @@ export default function ProductDetail() {
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
+                      aria-label={'View image ' + (index + 1)}
                       className={`w-16 h-16 overflow-hidden border-2 transition-colors ${
                         selectedImage === index ? 'border-ink' : 'border-transparent'
                       }`}
@@ -147,6 +148,7 @@ export default function ProductDetail() {
                       <img
                         src={url}
                         alt=""
+                        aria-hidden="true"
                         className="w-full h-full object-cover"
                         style={{ filter: 'sepia(0.2) contrast(1.05) brightness(0.97)' }}
                       />
@@ -213,13 +215,15 @@ export default function ProductDetail() {
                 <div className="flex items-center border border-warm-gray/50">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    aria-label="Decrease quantity"
                     className="px-3 py-2 text-ink hover:bg-warm-gray/20 transition-colors"
                   >
                     -
                   </button>
-                  <span className="font-body text-sm px-4 py-2 text-ink">{quantity}</span>
+                  <span className="font-body text-sm px-4 py-2 text-ink" aria-live="polite">{quantity}</span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
+                    aria-label="Increase quantity"
                     className="px-3 py-2 text-ink hover:bg-warm-gray/20 transition-colors"
                   >
                     +

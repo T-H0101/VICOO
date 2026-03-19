@@ -1,5 +1,5 @@
-var http = require(`../../../utils/request`);
-var util = require(`../../../utils/util`);
+var http = require('../../../utils/request');
+var util = require('../../../utils/util');
 
 Page({
   data: {
@@ -12,11 +12,11 @@ Page({
   },
   loadOrder: function() {
     var self = this;
-    http.get(`/orders/` + self.orderId).then(function(res) {
+    http.get('/orders/' + self.orderId).then(function(res) {
       self.setData({ order: res, loading: false });
     }).catch(function() { self.setData({ loading: false }); });
   },
   onTraceTap: function() {
-    wx.navigateTo({ url: `/pages/shop/index?traceId=` + this.data.order.id });
+    wx.navigateTo({ url: '/pages/shop/index?traceId=' + this.data.order.id });
   }
 });

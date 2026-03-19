@@ -26,7 +26,9 @@ class AuthRepository @Inject constructor(
             val response = api.login(LoginRequest(email, password))
             if (response.isSuccessful && response.body()?.success == true) {
                 val auth = response.body()!!.data!!
-                tokenProvider.saveTokens(auth.accessToken, auth.refreshToken ?: "")
+                if (!auth.refreshToken.isNullOrBlank()) {
+                    tokenProvider.saveTokens(auth.accessToken, auth.refreshToken)
+                }
                 Result.success(auth)
             } else {
                 val error = response.body()?.error?.message ?: "Login failed"
@@ -46,7 +48,9 @@ class AuthRepository @Inject constructor(
             val response = api.wechatLogin(request)
             if (response.isSuccessful && response.body()?.success == true) {
                 val auth = response.body()!!.data!!
-                tokenProvider.saveTokens(auth.accessToken, auth.refreshToken ?: "")
+                if (!auth.refreshToken.isNullOrBlank()) {
+                    tokenProvider.saveTokens(auth.accessToken, auth.refreshToken)
+                }
                 Result.success(auth)
             } else {
                 val error = response.body()?.error?.message ?: "WeChat login failed"

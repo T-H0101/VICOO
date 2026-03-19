@@ -7,7 +7,7 @@ import BleedTitleBlock from '@/components/editorial/BleedTitleBlock';
 import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeading';
 import StoryQuoteBlock from '@/components/editorial/StoryQuoteBlock';
 import PaperTextureBackground from '@/components/editorial/PaperTextureBackground';
-import DonationPanel from '@/components/common/DonationPanel';
+import DonationPanel from '@/components/editorial/DonationPanel';
 import ArtworkCard from '@/components/editorial/ArtworkCard';
 import type { Campaign, Artwork } from '@/types';
 

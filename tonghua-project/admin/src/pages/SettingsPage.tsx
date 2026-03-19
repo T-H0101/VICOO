@@ -121,6 +121,7 @@ export default function SettingsPage() {
               {(form.paymentMethods[method] as any).appId !== undefined && (
                 <Field label="App ID">
                   <input
+                    type="password"
                     value={(form.paymentMethods[method] as any).appId || ''}
                     onChange={(e) => setForm({
                       ...form,
@@ -137,6 +138,7 @@ export default function SettingsPage() {
               {(form.paymentMethods[method] as any).merchantId !== undefined && (
                 <Field label="Merchant ID">
                   <input
+                    type="password"
                     value={(form.paymentMethods[method] as any).merchantId || ''}
                     onChange={(e) => setForm({
                       ...form,
@@ -153,6 +155,7 @@ export default function SettingsPage() {
               {(form.paymentMethods[method] as any).publicKey !== undefined && (
                 <Field label="Public Key">
                   <input
+                    type="password"
                     value={(form.paymentMethods[method] as any).publicKey || ''}
                     onChange={(e) => setForm({
                       ...form,
@@ -169,6 +172,7 @@ export default function SettingsPage() {
               {(form.paymentMethods[method] as any).clientId !== undefined && (
                 <Field label="Client ID">
                   <input
+                    type="password"
                     value={(form.paymentMethods[method] as any).clientId || ''}
                     onChange={(e) => setForm({
                       ...form,

@@ -18,7 +18,7 @@
   /* ── Typography ── */
   --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-mono: 'IBM Plex Mono', 'Courier New', Courier, monospace;
-  --font-ui: 'Inter', 'Source Sans Pro', -apple-system, sans-serif;
+  --font-ui: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* ── Font Sizes ── */
   --text-hero: clamp(64px, 10vw, 120px);

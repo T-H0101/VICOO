@@ -24,11 +24,21 @@ export default function ChildAuditPage() {
     enabled: accessGranted,
   });
 
-  const handleAccess = () => {
-    if (accessCode === 'AUDIT2026') {
-      setAccessGranted(true);
-    } else {
-      alert('访问码错误，请联系管理员获取');
+  const handleAccess = async () => {
+    try {
+      const response = await fetch('/api/admin/auth/verify-audit-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ accessCode }),
+      });
+      if (response.ok) {
+        setAccessGranted(true);
+      } else {
+        alert('访问码错误，请联系管理员获取');
+      }
+    } catch {
+      alert('验证失败，请重试');
     }
   };
 
@@ -78,7 +88,7 @@ export default function ChildAuditPage() {
             <Button variant="primary" onClick={handleAccess}>验证</Button>
           </div>
           <p style={{ fontSize: 11, color: 'var(--color-text-light)', marginTop: 12, fontFamily: 'var(--font-mono)' }}>
-            演示访问码: AUDIT2026
+            联系管理员获取访问码
           </p>
         </div>
       </div>

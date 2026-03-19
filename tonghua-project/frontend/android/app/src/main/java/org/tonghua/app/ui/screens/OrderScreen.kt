@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,14 +34,15 @@ fun OrderScreen(
 ) {
     val detailState by viewModel.detailState.collectAsState()
 
-    var recipientName by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var addressLine by remember { mutableStateOf("") }
-    var city by remember { mutableStateOf("") }
-    var province by remember { mutableStateOf("") }
-    var postalCode by remember { mutableStateOf("") }
-    var orderPlaced by remember { mutableStateOf(false) }
-    var isSubmitting by remember { mutableStateOf(false) }
+    var recipientName by rememberSaveable { mutableStateOf("") }
+    var phone by rememberSaveable { mutableStateOf("") }
+    var addressLine by rememberSaveable { mutableStateOf("") }
+    var city by rememberSaveable { mutableStateOf("") }
+    var province by rememberSaveable { mutableStateOf("") }
+    var postalCode by rememberSaveable { mutableStateOf("") }
+    var orderPlaced by rememberSaveable { mutableStateOf(false) }
+    var isSubmitting by rememberSaveable { mutableStateOf(false) }
+    var orderError by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(productId) {
         viewModel.loadProductDetail(productId)
@@ -273,6 +275,24 @@ fun OrderScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Error display
+                orderError?.let { error ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
+                    ) {
+                        Text(
+                            text = error,
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
                 // Submit button
                 val isFormValid = recipientName.isNotEmpty() && phone.isNotEmpty() &&
                         addressLine.isNotEmpty() && city.isNotEmpty() && province.isNotEmpty()
@@ -280,9 +300,24 @@ fun OrderScreen(
                 Button(
                     onClick = {
                         isSubmitting = true
-                        // Simulate order submission
-                        orderPlaced = true
-                        isSubmitting = false
+                        orderError = null
+                        viewModel.placeOrder(
+                            productId = productId,
+                            recipientName = recipientName,
+                            phone = phone,
+                            addressLine = addressLine,
+                            city = city,
+                            province = province,
+                            postalCode = postalCode,
+                            onSuccess = {
+                                isSubmitting = false
+                                orderPlaced = true
+                            },
+                            onError = { error ->
+                                isSubmitting = false
+                                orderError = error
+                            },
+                        )
                     },
                     modifier = Modifier
                         .fillMaxWidth()

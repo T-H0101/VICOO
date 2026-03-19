@@ -74,6 +74,7 @@ class ApiClient @Inject constructor(
 interface TokenProvider {
     fun getAccessToken(): String?
     fun getRefreshToken(): String?
+    suspend fun initialize()
     suspend fun saveTokens(accessToken: String, refreshToken: String)
     suspend fun clearTokens()
 }

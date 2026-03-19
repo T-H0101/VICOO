@@ -1,19 +1,19 @@
-var http = require(`../../utils/request`);
-var auth = require(`../../utils/auth`);
+var http = require('../../utils/request');
+var auth = require('../../utils/auth');
 
 Page({
   data: {
     imageList: [],
-    childDisplayName: ``,
-    description: ``,
-    campaignId: ``,
+    childDisplayName: '',
+    description: '',
+    campaignId: '',
     campaigns: [],
     guardianConsent: false,
     uploading: false
   },
   onLoad: function() {
     var self = this;
-    http.get(`/campaigns/active`).then(function(res) {
+    http.get('/campaigns/active').then(function(res) {
       self.setData({ campaigns: res || [] });
     });
   },
@@ -21,9 +21,9 @@ Page({
     var self = this;
     wx.chooseMedia({
       count: 3 - self.data.imageList.length,
-      mediaType: [`image`],
-      sourceType: [`album`, `camera`],
-      sizeType: [`compressed`],
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
       success: function(res) {
         var files = res.tempFiles.map(function(f) { return f.tempFilePath; });
         self.setData({ imageList: self.data.imageList.concat(files) });
@@ -42,27 +42,26 @@ Page({
   onConsentChange: function(e) { this.setData({ guardianConsent: e.detail.value }); },
   submit: function() {
     var self = this;
-    if (\!self.data.imageList.length) { wx.showToast({ title: `\u8BF7\u9009\u62E9\u56FE\u7247`, icon: `none` }); return; }
-    if (\!self.data.childDisplayName) { wx.showToast({ title: `\u8BF7\u8F93\u5165\u7528\u6237\u540D`, icon: `none` }); return; }
-    if (\!self.data.guardianConsent) { wx.showToast({ title: `\u8BF7\u786E\u8BA4\u76D1\u62A4\u4EBA\u540C\u610F`, icon: `none` }); return; }
+    if (!self.data.imageList.length) { wx.showToast({ title: '请选择图片', icon: 'none' }); return; }
+    if (!self.data.childDisplayName) { wx.showToast({ title: '请输入用户名', icon: 'none' }); return; }
+    if (!self.data.guardianConsent) { wx.showToast({ title: '请确认监护人同意', icon: 'none' }); return; }
     auth.ensureLogin().then(function() {
       self.setData({ uploading: true });
       var formData = { childDisplayName: self.data.childDisplayName, description: self.data.description, campaignId: self.data.campaignId };
-      self.data.imageList.forEach(function(filePath, idx) {
-        wx.uploadFile({
-          url: getApp().globalData.baseUrl + `/artworks/upload`,
-          filePath: filePath,
-          name: `file`,
-          formData: formData,
-          header: { Authorization: `Bearer ` + auth.getToken() },
-          success: function() {
-            if (idx === self.data.imageList.length - 1) {
-              self.setData({ uploading: false });
-              wx.showToast({ title: `\u4E0A\u4F20\u6210\u529F` });
-              setTimeout(function() { wx.navigateBack(); }, 1500);
-            }
-          },
-          fail: function() { self.setData({ uploading: false }); wx.showToast({ title: `\u4E0A\u4F20\u5931\u8D25`, icon: `none` }); }
+      var completed = 0;
+      var failed = false;
+      self.data.imageList.forEach(function(filePath) {
+        http.upload('/artworks/upload', filePath, 'file', formData).then(function() {
+          completed++;
+          if (completed === self.data.imageList.length && !failed) {
+            self.setData({ uploading: false });
+            wx.showToast({ title: '上传成功' });
+            setTimeout(function() { wx.navigateBack(); }, 1500);
+          }
+        }).catch(function() {
+          failed = true;
+          self.setData({ uploading: false });
+          wx.showToast({ title: '上传失败', icon: 'none' });
         });
       });
     });

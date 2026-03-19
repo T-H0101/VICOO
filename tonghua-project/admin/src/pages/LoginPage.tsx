@@ -15,14 +15,25 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    // Simulate login
-    await new Promise((r) => setTimeout(r, 800));
-    login(
-      { id: 'user-001', username: username || '管理员', email: 'admin@tonghua.org', role: 'admin' },
-      'mock-jwt-token-' + Date.now()
-    );
-    toast.success('登录成功');
-    setLoading(false);
+    try {
+      const response = await fetch('/api/admin/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || '用户名或密码错误');
+      }
+      const data = await response.json();
+      login(data.user, data.token);
+      toast.success('登录成功');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '登录失败，请重试';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -145,7 +156,7 @@ export default function LoginPage() {
             textAlign: 'center', marginTop: 24,
             fontFamily: 'var(--font-mono)',
           }}>
-            演示环境：输入任意用户名密码即可登录
+            Tonghua Public Welfare Admin v1.0.0
           </p>
         </form>
       </div>

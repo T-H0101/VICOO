@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.tonghua.app.data.model.Artwork
 import org.tonghua.app.data.model.Campaign
@@ -43,11 +44,12 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            // Load active campaign
-            val campaignResult = campaignRepository.getActiveCampaign()
+            // Load campaign and artworks in parallel
+            val campaignDeferred = async { campaignRepository.getActiveCampaign() }
+            val artworksDeferred = async { artworkRepository.getArtworks(perPage = 6, sort = "vote_count") }
 
-            // Load featured artworks
-            val artworksResult = artworkRepository.getArtworks(perPage = 6, sort = "vote_count")
+            val campaignResult = campaignDeferred.await()
+            val artworksResult = artworksDeferred.await()
 
             val campaign = campaignResult.getOrNull()
             val artworks = artworksResult.getOrNull()?.first ?: emptyList()
@@ -71,7 +73,14 @@ class HomeViewModel @Inject constructor(
 
     fun voteArtwork(artworkId: String) {
         viewModelScope.launch {
-            artworkRepository.voteArtwork(artworkId)
+            val result = artworkRepository.voteArtwork(artworkId)
+            result.onSuccess {
+                // Refresh to update vote count
+                loadHomeData()
+            }
+            result.onFailure { e ->
+                _uiState.value = _uiState.value.copy(error = e.message ?: "Vote failed")
+            }
         }
     }
 }

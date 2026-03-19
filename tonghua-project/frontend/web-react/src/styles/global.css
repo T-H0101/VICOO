@@ -62,16 +62,6 @@ body::after {
   mix-blend-mode: multiply;
 }
 
-/* ── Sepia Image Treatment ── */
-img {
-  filter: sepia(0.2) contrast(1.05) brightness(0.97);
-  transition: filter var(--duration-normal) var(--ease-editorial);
-}
-
-img:hover {
-  filter: sepia(0.05) contrast(1.08) brightness(1.0);
-}
-
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
@@ -97,8 +87,10 @@ img:hover {
 }
 
 /* ── List Reset ── */
-ul, ol {
+nav ul, nav ol,
+.list-unstyled {
   list-style: none;
+  padding-left: 0;
 }
 
 /* ── Image Defaults ── */
@@ -106,6 +98,12 @@ img {
   max-width: 100%;
   height: auto;
   display: block;
+  filter: sepia(0.2) contrast(1.05) brightness(0.97);
+  transition: filter var(--duration-normal) var(--ease-editorial);
+}
+
+img:hover {
+  filter: sepia(0.05) contrast(1.08) brightness(1.0);
 }
 
 /* ── Button Reset ── */
@@ -118,9 +116,7 @@ button {
 
 /* ── Form Reset ── */
 input, textarea, select {
-  background: transparent;
-  border: none;
-  outline: none;
+  font: inherit;
   color: inherit;
 }
 

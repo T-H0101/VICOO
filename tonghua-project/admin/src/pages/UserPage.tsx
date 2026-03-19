@@ -24,6 +24,7 @@ export default function UserPage() {
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editRole, setEditRole] = useState('');
+  const [statusConfirm, setStatusConfirm] = useState<User | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['users', page, search],
@@ -75,10 +76,7 @@ export default function UserPage() {
             variant={record.status === 'active' ? 'danger' : 'secondary'}
             onClick={(e) => {
               e.stopPropagation();
-              statusMutation.mutate({
-                id: record.id,
-                status: record.status === 'active' ? 'disabled' : 'active',
-              });
+              setStatusConfirm(record);
             }}
           >
             {record.status === 'active' ? '禁用' : '启用'}
@@ -148,6 +146,46 @@ export default function UserPage() {
             </div>
             <div style={{ fontSize: 12, color: 'var(--color-text-light)', padding: '8px 12px', background: 'var(--color-warning-light)', borderRadius: 'var(--radius-sm)' }}>
               注意：修改角色将立即生效，请谨慎操作。
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Status Confirm Modal */}
+      <Modal
+        open={!!statusConfirm}
+        title={statusConfirm?.status === 'active' ? '确认禁用用户' : '确认启用用户'}
+        onClose={() => setStatusConfirm(null)}
+        width={400}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setStatusConfirm(null)}>取消</Button>
+            <Button
+              variant={statusConfirm?.status === 'active' ? 'danger' : 'primary'}
+              loading={statusMutation.isPending}
+              onClick={() => {
+                if (statusConfirm) {
+                  statusMutation.mutate({
+                    id: statusConfirm.id,
+                    status: statusConfirm.status === 'active' ? 'disabled' : 'active',
+                  }, { onSuccess: () => setStatusConfirm(null) });
+                }
+              }}
+            >
+              {statusConfirm?.status === 'active' ? '确认禁用' : '确认启用'}
+            </Button>
+          </>
+        }
+      >
+        {statusConfirm && (
+          <div>
+            <p style={{ fontSize: 14, margin: '0 0 8px' }}>
+              {statusConfirm.status === 'active'
+                ? `确定要禁用用户「${statusConfirm.username}」吗？禁用后该用户将无法登录。`
+                : `确定要启用用户「${statusConfirm.username}」吗？`}
+            </p>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', padding: '8px 12px', background: '#f9f9f7', borderRadius: 'var(--radius-sm)' }}>
+              邮箱：{statusConfirm.email}
             </div>
           </div>
         )}

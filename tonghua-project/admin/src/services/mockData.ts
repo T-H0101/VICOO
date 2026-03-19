@@ -4,11 +4,21 @@ import type {
   ChartDataPoint, SystemSettings,
 } from '../types';
 
-// Helper for random dates
-const randomDate = (start: string, end: string) => {
+// Deterministic seeded PRNG — replaces Math.random() for stable mock data
+function seeded(seed: number): number {
+  // Simple hash: returns deterministic 0..1 value from integer seed
+  let h = seed;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  h = Math.imul(h ^ (h >>> 13), 0x45d9f3b);
+  h = h ^ (h >>> 16);
+  return (h >>> 0) / 0xFFFFFFFF;
+}
+
+// Helper for deterministic dates
+const randomDate = (start: string, end: string, seed: number) => {
   const s = new Date(start).getTime();
   const e = new Date(end).getTime();
-  return new Date(s + Math.random() * (e - s)).toISOString();
+  return new Date(s + seeded(seed) * (e - s)).toISOString();
 };
 
 const statuses: Artwork['status'][] = ['pending', 'approved', 'rejected', 'archived'];
@@ -22,11 +32,11 @@ export const mockUsers: User[] = Array.from({ length: 48 }, (_, i) => ({
   id: `user-${String(i + 1).padStart(3, '0')}`,
   username: ['张明', '李华', '王芳', '刘洋', '陈静', '赵磊', '孙丽', '周杰', '吴敏', '郑伟'][i % 10] + (i > 9 ? i : ''),
   email: `user${i + 1}@tonghua.org`,
-  phone: `138${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`,
+  phone: `138${String(Math.floor(seeded(i * 101) * 100000000)).padStart(8, '0')}`,
   role: i === 0 ? 'admin' : (['editor', 'viewer', 'auditor'] as User['role'][])[i % 3],
   status: i < 40 ? 'active' : (['disabled', 'pending'] as User['status'][])[i % 2],
-  createdAt: randomDate('2024-01-01', '2025-12-31'),
-  lastLogin: randomDate('2025-01-01', '2026-03-19'),
+  createdAt: randomDate('2024-01-01', '2025-12-31', i * 7 + 1),
+  lastLogin: randomDate('2025-01-01', '2026-03-19', i * 7 + 2),
 }));
 
 // Mock Artworks
@@ -44,9 +54,9 @@ export const mockArtworks: Artwork[] = Array.from({ length: 86 }, (_, i) => ({
   status: statuses[i % 4],
   category: categories[i % categories.length],
   campaignId: `camp-${(i % 5) + 1}`,
-  votes: Math.floor(Math.random() * 500) + 10,
-  createdAt: randomDate('2025-01-01', '2026-03-01'),
-  reviewedAt: i % 4 !== 0 ? randomDate('2025-02-01', '2026-03-19') : undefined,
+  votes: Math.floor(seeded(i * 31) * 500) + 10,
+  createdAt: randomDate('2025-01-01', '2026-03-01', i * 7 + 3),
+  reviewedAt: i % 4 !== 0 ? randomDate('2025-02-01', '2026-03-19', i * 7 + 4) : undefined,
   reviewedBy: i % 4 !== 0 ? '管理员' : undefined,
 }));
 
@@ -103,8 +113,8 @@ export const mockDonations: Donation[] = Array.from({ length: 120 }, (_, i) => (
   campaignTitle: ['2025 春季童画展', '2025 夏季公益画展', '2025 秋季童画公益', '2026 新年童画', '2026 春季童画节'][i % 5],
   message: i % 3 === 0 ? '希望孩子们的画能被更多人看到！' : undefined,
   isAnonymous: i % 5 === 0,
-  transactionId: `TXN${Date.now()}${i}`,
-  createdAt: randomDate('2025-01-01', '2026-03-19'),
+  transactionId: `TXN${20250000 + i}`,
+  createdAt: randomDate('2025-01-01', '2026-03-19', i * 7 + 5),
 }));
 
 // Mock Orders
@@ -127,10 +137,10 @@ export const mockOrders: Order[] = Array.from({ length: 95 }, (_, i) => ({
   status: orderStatuses[i % orderStatuses.length],
   paymentMethod: ['wechat', 'alipay'][i % 2],
   shippingAddress: `${regions[i % regions.length]}某区某路${i + 1}号`,
-  trackingNo: i % 6 >= 2 && i % 6 <= 3 ? `SF${Math.floor(Math.random() * 10000000000)}` : undefined,
-  createdAt: randomDate('2025-01-01', '2026-03-19'),
-  paidAt: i % 6 !== 0 ? randomDate('2025-01-02', '2026-03-19') : undefined,
-  shippedAt: i % 6 >= 2 ? randomDate('2025-01-05', '2026-03-19') : undefined,
+  trackingNo: i % 6 >= 2 && i % 6 <= 3 ? `SF${String(Math.floor(seeded(i * 53) * 10000000000)).padStart(10, '0')}` : undefined,
+  createdAt: randomDate('2025-01-01', '2026-03-19', i * 7 + 6),
+  paidAt: i % 6 !== 0 ? randomDate('2025-01-02', '2026-03-19', i * 7 + 7) : undefined,
+  shippedAt: i % 6 >= 2 ? randomDate('2025-01-05', '2026-03-19', i * 7 + 8) : undefined,
 }));
 
 // Mock Child Participants
@@ -139,16 +149,16 @@ export const mockChildParticipants: ChildParticipant[] = Array.from({ length: 35
   childName: ['陈小春', '林小明', '黄小红', '杨小华', '朱小丽', '何小强', '高小芳', '梁小军'][i % 8] + (i > 7 ? `${i}` : ''),
   age: 5 + (i % 8),
   guardianName: ['陈大明', '林大力', '黄国庆', '杨秀英', '朱建华', '何志远', '高明辉', '梁永强'][i % 8],
-  guardianPhone: `138${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`,
+  guardianPhone: `138${String(Math.floor(seeded(i * 103) * 100000000)).padStart(8, '0')}`,
   guardianEmail: `guardian${i + 1}@example.com`,
   consentGiven: true,
-  consentDate: randomDate('2024-06-01', '2025-12-31'),
+  consentDate: randomDate('2024-06-01', '2025-12-31', i * 7 + 9),
   region: regions[i % regions.length],
   school: ['阳光小学', '希望小学', '育才小学', '实验小学', '第一小学'][i % 5],
-  artworkCount: Math.floor(Math.random() * 10) + 1,
+  artworkCount: Math.floor(seeded(i * 37) * 10) + 1,
   status: i < 30 ? 'active' : (['withdrawn', 'pending_review'] as ChildParticipant['status'][])[(i - 30) % 2],
-  createdAt: randomDate('2024-06-01', '2025-12-31'),
-  lastActivity: randomDate('2025-06-01', '2026-03-19'),
+  createdAt: randomDate('2024-06-01', '2025-12-31', i * 7 + 10),
+  lastActivity: randomDate('2025-06-01', '2026-03-19', i * 7 + 11),
 }));
 
 // Mock Audit Logs
@@ -165,7 +175,7 @@ export const mockAuditLogs: AuditLogEntry[] = Array.from({ length: 200 }, (_, i)
   details: `${auditActions[i % auditActions.length]} - ${auditResources[i % auditResources.length]} #${(i % 50) + 1}`,
   ipAddress: `192.168.1.${(i % 254) + 1}`,
   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-  timestamp: randomDate('2025-06-01', '2026-03-19'),
+  timestamp: randomDate('2025-06-01', '2026-03-19', i * 7 + 12),
 }));
 
 // Dashboard Metrics

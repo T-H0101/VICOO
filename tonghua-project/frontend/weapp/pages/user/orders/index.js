@@ -1,17 +1,17 @@
-var app = getApp();
-var auth = require("../../../utils/auth.js");
-var util = require("../../../utils/util.js");
+var auth = require('../../../utils/auth');
+var http = require('../../../utils/request');
+var util = require('../../../utils/util');
 
 Page({
   data: {
     statusTabs: [
-      { key: "all", label: "All" },
-      { key: "pending", label: "Pending" },
-      { key: "paid", label: "Paid" },
-      { key: "shipped", label: "Shipped" },
-      { key: "completed", label: "Completed" }
+      { key: 'all', label: 'All' },
+      { key: 'pending', label: 'Pending' },
+      { key: 'paid', label: 'Paid' },
+      { key: 'shipped', label: 'Shipped' },
+      { key: 'completed', label: 'Completed' }
     ],
-    currentStatus: "all",
+    currentStatus: 'all',
     orders: [],
     page: 1,
     pageSize: 10,
@@ -21,8 +21,12 @@ Page({
   },
 
   onLoad: function () {
-    if (!auth.ensureLogin()) { return; }
-    this.loadOrders();
+    var self = this;
+    auth.ensureLogin().then(function() {
+      self.loadOrders();
+    }).catch(function() {
+      wx.showToast({ title: '\u8BF7\u5148\u767B\u5F55', icon: 'none' });
+    });
   },
 
   onShow: function () {
@@ -60,56 +64,45 @@ Page({
 
     that.setData({ loading: true });
 
-    wx.request({
-      url: app.globalData.baseUrl + "/api/orders",
-      method: "GET",
-      header: {
-        "Authorization": "Bearer " + auth.getToken()
-      },
-      data: {
-        status: that.data.currentStatus === "all" ? "" : that.data.currentStatus,
-        page: that.data.page,
-        pageSize: that.data.pageSize
-      },
-      success: function (res) {
-        if (res.data && res.data.code === 0) {
-          var list = res.data.data.list || [];
-          list = list.map(function (item) {
-            item.createdAtFormatted = util.formatDate(item.createdAt);
-            item.totalAmountFormatted = util.formatPrice(item.totalAmount);
-            return item;
-          });
-          var orders = that.data.page === 1 ? list : that.data.orders.concat(list);
-          that.setData({
-            orders: orders,
-            hasMore: list.length >= that.data.pageSize,
-            page: that.data.page + 1,
-            isEmpty: that.data.page === 1 && list.length === 0
-          });
-        }
-      },
-      fail: function () {
-        wx.showToast({ title: "Failed to load", icon: "none" });
-      },
-      complete: function () {
-        that.setData({ loading: false });
-      }
+    http.get('/orders', {
+      status: that.data.currentStatus === 'all' ? '' : that.data.currentStatus,
+      page: that.data.page,
+      pageSize: that.data.pageSize
+    }).then(function (res) {
+      var list = (res && res.list) || [];
+      list = list.map(function (item) {
+        item.createdAtFormatted = util.formatDate(item.createdAt);
+        item.totalAmountFormatted = util.formatPrice(item.totalAmount);
+        return item;
+      });
+      var orders = that.data.page === 1 ? list : that.data.orders.concat(list);
+      that.setData({
+        orders: orders,
+        hasMore: list.length >= that.data.pageSize,
+        page: that.data.page + 1,
+        isEmpty: that.data.page === 1 && list.length === 0
+      });
+    }).catch(function () {
+      // Error toast already shown by centralized request utility
+    }).then(function() {
+      // "finally" — always clear loading
+      that.setData({ loading: false });
     });
   },
 
   handleOrderTap: function (e) {
     var id = e.currentTarget.dataset.id;
-    wx.navigateTo({ url: "/pages/order/detail/index?id=" + id });
+    wx.navigateTo({ url: '/pages/order/detail/index?id=' + id });
   },
 
   getStatusText: function (status) {
     var map = {
-      pending: "Pending Payment",
-      paid: "Paid",
-      shipped: "Shipped",
-      completed: "Completed",
-      cancelled: "Cancelled",
-      refunded: "Refunded"
+      pending: 'Pending Payment',
+      paid: 'Paid',
+      shipped: 'Shipped',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      refunded: 'Refunded'
     };
     return map[status] || status;
   }

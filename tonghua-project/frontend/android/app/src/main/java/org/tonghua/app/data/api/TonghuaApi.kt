@@ -15,7 +15,7 @@ interface TonghuaApi {
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): Response<ApiResponse<AuthResponse>>
 
-    @POST("auth/login")
+    @POST("auth/wechat-login")
     suspend fun wechatLogin(@Body request: WechatLoginRequest): Response<ApiResponse<AuthResponse>>
 
     @POST("auth/refresh")

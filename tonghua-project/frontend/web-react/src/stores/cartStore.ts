@@ -11,13 +11,11 @@ interface CartState {
   clearCart: () => void;
   toggleCart: () => void;
   setCartOpen: (open: boolean) => void;
-  totalItems: () => number;
-  totalPrice: () => number;
 }
 
 export const useCartStore = create<CartState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       items: [],
       isOpen: false,
 
@@ -62,15 +60,6 @@ export const useCartStore = create<CartState>()(
       clearCart: () => set({ items: [] }),
       toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
       setCartOpen: (isOpen) => set({ isOpen }),
-
-      totalItems: () =>
-        get().items.reduce((sum, item) => sum + item.quantity, 0),
-
-      totalPrice: () =>
-        get().items.reduce(
-          (sum, item) => sum + item.product.price * item.quantity,
-          0
-        ),
     }),
     {
       name: 'tonghua-cart',
@@ -78,3 +67,10 @@ export const useCartStore = create<CartState>()(
     }
   )
 );
+
+// Selectors — use with useCartStore(selectTotalItems) for reactive updates
+export const selectTotalItems = (state: CartState) =>
+  state.items.reduce((sum, item) => sum + item.quantity, 0);
+
+export const selectTotalPrice = (state: CartState) =>
+  state.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);

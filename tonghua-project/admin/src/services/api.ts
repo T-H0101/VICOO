@@ -15,15 +15,8 @@ import {
 const api = axios.create({
   baseURL: '/api/admin',
   timeout: 10000,
+  withCredentials: true, // Send httpOnly cookies with every request
   headers: { 'Content-Type': 'application/json' },
-});
-
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
 });
 
 api.interceptors.response.use(
@@ -69,7 +62,10 @@ function paginate<T>(items: T[], params: FilterParams): PaginatedResponse<T> {
 // Delay helper to simulate network
 const delay = (ms = 300) => new Promise((r) => setTimeout(r, ms));
 
-// === API Functions (using mock data, swap to real API calls later) ===
+// === API Functions (using mock data) ===
+// NOTE: Currently using mock data for development.
+// TODO: Replace mock returns with real API calls using the `api` axios instance above.
+// Example: return api.get('/dashboard/metrics').then(r => r.data);
 
 export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
   await delay(200);

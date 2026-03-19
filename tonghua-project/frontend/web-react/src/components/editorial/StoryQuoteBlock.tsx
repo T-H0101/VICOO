@@ -14,7 +14,7 @@ export default function StoryQuoteBlock({
   role,
   className = '',
 }: StoryQuoteBlockProps) {
-  const [ref, isVisible] = useScrollReveal<HTMLDivElement>();
+  const [ref, isVisible] = useScrollReveal<HTMLQuoteElement>();
 
   return (
     <motion.blockquote

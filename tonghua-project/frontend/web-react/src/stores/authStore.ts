@@ -4,8 +4,6 @@ import type { User } from '@/types';
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (user: User, accessToken: string, refreshToken: string) => void;
@@ -18,26 +16,25 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
 
-      login: (user, accessToken, refreshToken) =>
+      login: (user, _accessToken, _refreshToken) => {
+        // Tokens are managed by httpOnly cookies set by the server.
+        // Do NOT store tokens in client-side state or localStorage.
         set({
           user,
-          accessToken,
-          refreshToken,
           isAuthenticated: true,
-        }),
+        });
+      },
 
-      logout: () =>
+      logout: () => {
+        // Server will clear httpOnly cookies on /auth/logout
         set({
           user: null,
-          accessToken: null,
-          refreshToken: null,
           isAuthenticated: false,
-        }),
+        });
+      },
 
       updateUser: (userData) =>
         set((state) => ({
@@ -50,8 +47,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'tonghua-auth',
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }

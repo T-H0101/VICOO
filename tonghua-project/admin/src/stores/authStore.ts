@@ -11,7 +11,6 @@ interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
-  token: string | null;
   isAuthenticated: boolean;
   login: (user: AuthUser, token: string) => void;
   logout: () => void;
@@ -22,10 +21,15 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      token: null,
-      isAuthenticated: true, // Default to true for demo; set to false for real auth
-      login: (user, token) => set({ user, token, isAuthenticated: true }),
-      logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      isAuthenticated: false,
+      login: (user, _token) => {
+        // Token is managed by httpOnly cookies set by the server.
+        set({ user, isAuthenticated: true });
+      },
+      logout: () => {
+        // Server will clear httpOnly cookies on /api/admin/auth/logout
+        set({ user: null, isAuthenticated: false });
+      },
       updateUser: (updates) =>
         set((state) => ({
           user: state.user ? { ...state.user, ...updates } : null,
@@ -33,6 +37,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'tonghua-admin-auth',
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );
