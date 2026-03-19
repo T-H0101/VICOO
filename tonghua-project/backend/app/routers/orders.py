@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from decimal import Decimal
+from typing import Union
 
 from app.database import get_db
 from app.models.order import Order, OrderItem
-from app.schemas import ApiResponse, OrderCreate, OrderOut, OrderStatusUpdate, PaginatedResponse
+from app.schemas import ApiResponse, OrderCreate, OrderOut, OrderStatusUpdate, PaginatedResponse, WeChatPaymentParams
 from app.deps import get_current_user, require_role
 from app.security import generate_order_no
+from app.services.payment_service import payment_service
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -159,17 +161,22 @@ async def get_order(
 
 
 @router.post("", response_model=ApiResponse, status_code=201)
+@router.post("/create", response_model=ApiResponse, status_code=201)
 async def create_order(
     body: OrderCreate,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new order."""
+    """Create a new order.
+
+    Returns order data plus WeChat payment parameters if payment_method is 'wechat'.
+    """
     try:
         total = sum(item.price * item.quantity for item in body.items)
+        order_no = generate_order_no()
         order = Order(
             user_id=current_user["id"],
-            order_no=generate_order_no(),
+            order_no=order_no,
             total_amount=total,
             shipping_address=body.shipping_address,
             payment_method=body.payment_method,
@@ -185,15 +192,30 @@ async def create_order(
             )
             db.add(oi)
         await db.flush()
-        return ApiResponse(data=OrderOut.model_validate(order).model_dump())
+
+        # Prepare response data
+        response_data = OrderOut.model_validate(order).model_dump()
+
+        # Add WeChat payment parameters if payment method is WeChat Pay
+        if body.payment_method == "wechat":
+            payment_params = payment_service.create_unified_order(
+                order_no=order_no,
+                amount=total,
+                description=f"商品订单 {order_no}",
+                trade_type="JSAPI"
+            )
+            response_data.update(payment_params)
+
+        return ApiResponse(data=response_data)
     except Exception:
         import random
         new_id = max(o["id"] for o in _mock_orders) + 1 if _mock_orders else 1
+        order_no = generate_order_no()
         total = sum(float(item.price) * item.quantity for item in body.items)
         new_order = {
             "id": new_id,
             "user_id": current_user["id"],
-            "order_no": generate_order_no(),
+            "order_no": order_no,
             "total_amount": str(total),
             "status": "pending",
             "shipping_address": body.shipping_address,
@@ -206,6 +228,17 @@ async def create_order(
             "created_at": "2025-06-01T00:00:00",
             "updated_at": "2025-06-01T00:00:00",
         }
+
+        # Add WeChat payment parameters if payment method is WeChat Pay
+        if body.payment_method == "wechat":
+            payment_params = payment_service.create_unified_order(
+                order_no=order_no,
+                amount=Decimal(str(total)),
+                description=f"商品订单 {order_no}",
+                trade_type="JSAPI"
+            )
+            new_order.update(payment_params)
+
         _mock_orders.append(new_order)
         return ApiResponse(data=new_order)
 

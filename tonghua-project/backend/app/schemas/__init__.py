@@ -76,6 +76,11 @@ from app.schemas.payment import (
     PaymentOut,
 )
 
+# Common payment schemas
+from app.schemas.payment_common import (
+    WeChatPaymentParams,
+)
+
 # Supply chain
 from app.schemas.supply_chain import (
     SupplyChainRecordCreate,
@@ -132,6 +137,7 @@ __all__ = [
     "OrderStatusUpdate",
     "OrderListItem",
     "OrderOut",
+    "WeChatPaymentParams",
     # Payment
     "PaymentCreate",
     "PaymentCallback",

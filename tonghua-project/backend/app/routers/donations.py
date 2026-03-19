@@ -7,8 +7,9 @@ from datetime import datetime
 from app.database import get_db
 from app.models.donation import Donation
 from app.models.campaign import Campaign
-from app.schemas import ApiResponse, DonationCreate, DonationOut, PaginatedResponse
+from app.schemas import ApiResponse, DonationCreate, DonationOut, PaginatedResponse, WeChatPaymentParams
 from app.deps import get_current_user
+from app.services.payment_service import payment_service
 
 router = APIRouter(prefix="/donations", tags=["Donations"])
 
@@ -110,8 +111,12 @@ async def get_donation(donation_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=ApiResponse, status_code=201)
+@router.post("/create", response_model=ApiResponse, status_code=201)
 async def create_donation(body: DonationCreate, db: AsyncSession = Depends(get_db)):
-    """Create a new donation."""
+    """Create a new donation.
+
+    Returns donation data plus WeChat payment parameters if payment_method is 'wechat'.
+    """
     try:
         donation = Donation(**body.model_dump())
         db.add(donation)
@@ -123,16 +128,45 @@ async def create_donation(body: DonationCreate, db: AsyncSession = Depends(get_d
             if campaign:
                 campaign.current_amount = (campaign.current_amount or 0) + body.amount
         await db.flush()
-        return ApiResponse(data=DonationOut.model_validate(donation).model_dump())
+
+        # Prepare response data
+        response_data = DonationOut.model_validate(donation).model_dump()
+        response_data["donationId"] = donation.id  # Add camelCase alias for frontend
+
+        # Add WeChat payment parameters if payment method is WeChat Pay
+        if body.payment_method == "wechat":
+            payment_params = payment_service.create_unified_order(
+                order_no=f"DON{donation.id}",
+                amount=body.amount,
+                description=f"公益捐赠 - {body.donor_name}" if not body.is_anonymous else "公益捐赠",
+                trade_type="JSAPI",
+                donation_id=donation.id
+            )
+            response_data.update(payment_params)
+
+        return ApiResponse(data=response_data)
     except Exception:
         new_id = max(d["id"] for d in _mock_donations) + 1 if _mock_donations else 1
         new_donation = {
             "id": new_id,
+            "donationId": new_id,  # Add camelCase alias for frontend
             **body.model_dump(mode="json"),
             "payment_id": None,
             "status": "pending",
             "created_at": "2025-06-01T00:00:00",
         }
+
+        # Add WeChat payment parameters if payment method is WeChat Pay
+        if body.payment_method == "wechat":
+            payment_params = payment_service.create_unified_order(
+                order_no=f"DON{new_id}",
+                amount=body.amount,
+                description=f"公益捐赠 - {body.donor_name}" if not body.is_anonymous else "公益捐赠",
+                trade_type="JSAPI",
+                donation_id=new_id
+            )
+            new_donation.update(payment_params)
+
         _mock_donations.append(new_donation)
         return ApiResponse(data=new_donation)
 

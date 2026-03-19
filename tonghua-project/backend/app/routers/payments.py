@@ -5,8 +5,9 @@ from decimal import Decimal
 
 from app.database import get_db
 from app.models.payment import PaymentTransaction
-from app.schemas import ApiResponse, PaymentCreate, PaymentOut, PaginatedResponse
+from app.schemas import ApiResponse, PaymentCreate, PaymentOut, PaginatedResponse, WeChatPaymentParams
 from app.deps import get_current_user
+from app.services.payment_service import payment_service
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -63,6 +64,22 @@ async def alipay_notify():
     """Handle Alipay payment notification callback."""
     # In production: verify signature, update payment status, update order/donation
     return ApiResponse(data={"message": "Alipay notification received"})
+
+
+@router.get("/test-wechat-params", response_model=ApiResponse)
+async def test_wechat_params():
+    """Test endpoint to verify WeChat payment parameter generation."""
+    try:
+        payment_params = payment_service.create_unified_order(
+            order_no="TEST123",
+            amount=Decimal("100.00"),
+            description="Test Donation",
+            trade_type="JSAPI",
+            donation_id=999
+        )
+        return ApiResponse(data=payment_params)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{payment_id}", response_model=ApiResponse)
