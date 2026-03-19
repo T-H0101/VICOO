@@ -12,10 +12,11 @@ function generateNonce() {
   } else if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(array);
   } else {
-    // Fallback: use timestamp-based pseudo-random (less secure but functional)
-    var timestamp = Date.now();
+    // Fallback: Use Math.random for non-cryptographic randomness (better than predictable LCG)
+    // Note: This is not cryptographically secure but prevents simple replay attacks based on timestamp.
+    // For production, ensure wx.getRandomValues is available.
     for (var i = 0; i < 16; i++) {
-      array[i] = (timestamp * (i + 1) * 1103515245) & 0xFF;
+      array[i] = Math.floor(Math.random() * 256);
     }
   }
   return Array.from(array).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
@@ -39,7 +40,17 @@ function request(options) {
         } else if (res.statusCode === 401) {
           // Session expired - redirect to login
           if (options._refreshAttempted) {
-            wx.navigateTo({ url: '/pages/user/index' });
+            // Use switchTab for Tab Bar pages, navigateTo for regular pages
+            var loginUrl = '/pages/user/index';
+            var isTabPage = loginUrl.startsWith('/pages/') &&
+                           (loginUrl.includes('/pages/user/') ||
+                            loginUrl.includes('/pages/shop/') ||
+                            loginUrl.includes('/pages/home/'));
+            if (isTabPage) {
+              wx.switchTab({ url: loginUrl });
+            } else {
+              wx.navigateTo({ url: loginUrl });
+            }
             reject(new Error('Session expired. Please log in again.'));
             return;
           }
@@ -111,7 +122,17 @@ function upload(url, filePath, name, formData) {
           }
         } else if (res.statusCode === 401) {
           // Session expired - redirect to login
-          wx.navigateTo({ url: '/pages/user/index' });
+          // Use switchTab for Tab Bar pages, navigateTo for regular pages
+          var loginUrl = '/pages/user/index';
+          var isTabPage = loginUrl.startsWith('/pages/') &&
+                         (loginUrl.includes('/pages/user/') ||
+                          loginUrl.includes('/pages/shop/') ||
+                          loginUrl.includes('/pages/home/'));
+          if (isTabPage) {
+            wx.switchTab({ url: loginUrl });
+          } else {
+            wx.navigateTo({ url: loginUrl });
+          }
           reject(new Error('Session expired. Please log in again.'));
         } else {
           var msg = 'Upload failed: ' + res.statusCode;

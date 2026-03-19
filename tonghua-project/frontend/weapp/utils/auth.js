@@ -5,21 +5,47 @@ var http = require('./request');
 // The client does NOT store the token locally.
 
 function checkLogin() {
-  // With httpOnly Cookies, we cannot check login status synchronously from the client.
-  // Use an asynchronous check (e.g., fetch user profile) or assume logged out until
-  // the server responds with 401/200. Here we return false to force re-login checks.
-  // Real implementation might query an endpoint like GET /api/user/me
-  // For now, we rely on the request interceptor or component logic to handle session state.
-  return false;
+  // With httpOnly Cookies, we check local state for a quick sync check.
+  // Real session validity is verified by ensureLogin() calling /api/user/me.
+  var app = getApp();
+  return !!app.globalData.userInfo;
 }
 
 function ensureLogin() {
   return new Promise(function(resolve, reject) {
-    // Client handles token presence
-    // If token is missing, login flow should be triggered
-    // Note: This function currently resolves immediately.
-    // Real implementation might check checkLogin() and redirect if false.
-    resolve();
+    var app = getApp();
+
+    // 1. Check local state
+    if (app.globalData.userInfo) {
+      resolve(app.globalData.userInfo);
+      return;
+    }
+
+    // 2. Verify session with server
+    http.get('/api/user/me')
+      .then(function(res) {
+        // Assuming response structure is { data: { ... } } or similar
+        // Adjust if the API response is direct object
+        var userData = res.data || res;
+        app.globalData.userInfo = userData;
+        resolve(userData);
+      })
+      .catch(function(err) {
+        // If unauthorized (401), try logging in
+        if (err.statusCode === 401 || (err.message && err.message.includes('401'))) {
+          doLogin()
+            .then(function(loginRes) {
+              // doLogin resolves with the response from /auth/wx-login
+              // Usually /auth/wx-login returns user info or we need to fetch it again?
+              // Assuming loginRes contains user info.
+              app.globalData.userInfo = loginRes.data || loginRes;
+              resolve(app.globalData.userInfo);
+            })
+            .catch(reject);
+        } else {
+          reject(err);
+        }
+      });
   });
 }
 

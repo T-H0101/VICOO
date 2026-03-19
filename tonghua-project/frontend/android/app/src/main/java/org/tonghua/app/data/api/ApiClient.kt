@@ -12,9 +12,12 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.tonghua.app.BuildConfig
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import android.util.Base64
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 /**
  * OkHttp client configuration with httpOnly Cookie authentication.
@@ -81,28 +84,92 @@ class AndroidCookieJar(private val context: Context) : CookieJar {
         )
     }
     private val cookieKey = "stored_cookies"
+    private val gson = Gson()
+
+    /**
+     * Data class for secure cookie serialization.
+     * Using explicit fields prevents injection attacks.
+     */
+    private data class SerializableCookie(
+        val name: String,
+        val value: String,
+        val domain: String?,
+        val path: String?,
+        val expiresAt: Long?,
+        val secure: Boolean,
+        val httpOnly: Boolean,
+    )
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        // Use newline as delimiter since it doesn't appear in cookie strings
-        // Each cookie is serialized as a single line
-        val serialized = cookies.joinToString("\n") { it.toString() }
-        prefs.edit().putString(cookieKey, serialized).apply()
+        // Convert cookies to serializable format
+        val serializableCookies = cookies.map { cookie ->
+            SerializableCookie(
+                name = cookie.name,
+                value = cookie.value,
+                domain = cookie.domain,
+                path = cookie.path,
+                expiresAt = if (cookie.expiresAt != Long.MAX_VALUE) cookie.expiresAt else null,
+                secure = cookie.secure,
+                httpOnly = cookie.httpOnly,
+            )
+        }
+
+        // Serialize to JSON and encode as Base64 to prevent injection
+        val json = gson.toJson(serializableCookies)
+        val base64Encoded = Base64.encodeToString(json.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+
+        prefs.edit().putString(cookieKey, base64Encoded).apply()
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val serialized = prefs.getString(cookieKey, "") ?: ""
-        if (serialized.isEmpty()) return emptyList()
+        val base64Encoded = prefs.getString(cookieKey, "") ?: ""
+        if (base64Encoded.isEmpty()) return emptyList()
 
-        return serialized.split("\n").mapNotNull { cookieStr ->
-            if (cookieStr.trim().isNotEmpty()) {
+        return try {
+            // Decode Base64 and parse JSON
+            val json = String(Base64.decode(base64Encoded, Base64.NO_WRAP), Charsets.UTF_8)
+            val type = object : TypeToken<List<SerializableCookie>>() {}.type
+            val serializableCookies: List<SerializableCookie> = gson.fromJson(json, type)
+
+            serializableCookies.mapNotNull { serializableCookie ->
                 try {
-                    Cookie.parse(url, cookieStr.trim())
+                    // Build cookie string in the format OkHttp expects
+                    val cookieString = buildString {
+                        append("${serializableCookie.name}=${serializableCookie.value}")
+                        serializableCookie.domain?.let { append("; Domain=$it") }
+                        serializableCookie.path?.let { append("; Path=$it") }
+                        serializableCookie.expiresAt?.let {
+                            append("; Expires=${java.time.Instant.ofEpochMilli(it)}")
+                        }
+                        if (serializableCookie.secure) append("; Secure")
+                        if (serializableCookie.httpOnly) append("; HttpOnly")
+                    }
+
+                    val cookie = Cookie.parse(url, cookieString)
+                    // Filter out expired cookies
+                    if (cookie != null && !cookie.expiresAt.isExpired()) {
+                        cookie
+                    } else {
+                        null
+                    }
                 } catch (e: Exception) {
+                    // Log parsing error but continue with other cookies
+                    android.util.Log.e("AndroidCookieJar", "Error parsing cookie: ${e.message}")
                     null
                 }
-            } else {
-                null
             }
+        } catch (e: Exception) {
+            // If deserialization fails, return empty list and log error
+            android.util.Log.e("AndroidCookieJar", "Error deserializing cookies: ${e.message}")
+            emptyList()
         }
+    }
+
+    /**
+     * Extension function to check if a timestamp is expired.
+     * Uses the same logic as OkHttp's Cookie.expired() method.
+     */
+    private fun Long.isExpired(): Boolean {
+        return this < System.currentTimeMillis()
     }
 }

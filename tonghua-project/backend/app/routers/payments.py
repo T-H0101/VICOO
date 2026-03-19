@@ -3,6 +3,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from decimal import Decimal
 import xml.etree.ElementTree as ET
+import secrets
 
 from app.database import get_db
 from app.models.payment import PaymentTransaction
@@ -37,7 +38,6 @@ async def create_payment(body: PaymentCreate, db: AsyncSession = Depends(get_db)
         await db.flush()
         return ApiResponse(data=PaymentOut.model_validate(tx).model_dump())
     except Exception:
-        import random
         new_id = max(p["id"] for p in _mock_payments) + 1 if _mock_payments else 1
         new_payment = {
             "id": new_id,
@@ -45,7 +45,7 @@ async def create_payment(body: PaymentCreate, db: AsyncSession = Depends(get_db)
             "donation_id": body.donation_id,
             "amount": str(body.amount),
             "method": body.method,
-            "provider_transaction_id": f"{body.method}_pending_{random.randint(10000, 99999)}",
+            "provider_transaction_id": f"{body.method}_pending_{secrets.randbelow(90000) + 10000}",
             "status": "pending",
             "created_at": "2025-06-01T00:00:00",
         }
@@ -55,7 +55,12 @@ async def create_payment(body: PaymentCreate, db: AsyncSession = Depends(get_db)
 
 @router.post("/wechat-notify")
 async def wechat_notify(request: Request):
-    """Handle WeChat payment notification callback."""
+    """Handle WeChat payment notification callback.
+
+    Security: This is a public endpoint called by WeChat servers.
+    Authentication is performed via WeChat signature verification,
+    not via user session cookies.
+    """
     # Read the raw XML body from the request
     xml_body = await request.body()
 
@@ -78,10 +83,27 @@ async def wechat_notify(request: Request):
             )
 
         # Signature is valid, process the payment
-        # In production: update payment status, update order/donation
-        transaction_id = params.get("transaction_id")
-        out_trade_no = params.get("out_trade_no")
+        # Check result_code from WeChat
         result_code = params.get("result_code")
+        if result_code != "SUCCESS":
+            # Payment failed or pending, WeChat expects failure response
+            return Response(
+                content=f"<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[Payment result is not SUCCESS: {result_code}]]></return_msg></xml>",
+                media_type="application/xml"
+            )
+
+        # Check transaction_id existence
+        transaction_id = params.get("transaction_id")
+        if not transaction_id:
+            return Response(
+                content="<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[Missing transaction_id]]></return_msg></xml>",
+                media_type="application/xml"
+            )
+
+        out_trade_no = params.get("out_trade_no")
+
+        # In production: update payment status, update order/donation
+        # Ensure idempotency: check if transaction_id already processed
 
         # Example logic to update database (mocked for now)
         # In a real scenario, you would query the DB by out_trade_no and update the status

@@ -1,7 +1,7 @@
 """WeChat Pay integration service."""
 
 import time
-import random
+import secrets
 import hashlib
 import xml.etree.ElementTree as ET
 from decimal import Decimal
@@ -13,8 +13,13 @@ class WeChatPayService:
     """WeChat Pay unified order service."""
 
     def __init__(self):
-        self.app_id = settings.WECHAT_APP_ID or "wx_test_app_id"
-        self.mch_id = settings.WECHAT_APP_ID or "test_merchant_id"  # Mock merchant ID
+        # Raise exception if required configs are missing
+        if not settings.WECHAT_APP_ID:
+            raise ValueError("WECHAT_APP_ID environment variable is required for payment security")
+        self.app_id = settings.WECHAT_APP_ID
+        if not settings.WECHAT_MCH_ID:
+            raise ValueError("WECHAT_MCH_ID environment variable is required for payment security")
+        self.mch_id = settings.WECHAT_MCH_ID
         # Use dedicated WeChat Pay API key, not the system AES key
         # Raise exception if API key is not configured (security requirement)
         if not settings.WECHAT_PAY_API_KEY:
@@ -26,14 +31,13 @@ class WeChatPayService:
         self.notify_url = settings.WECHAT_NOTIFY_URL
 
     def generate_nonce_str(self) -> str:
-        """Generate random nonce string."""
-        chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        return "".join(random.choice(chars) for _ in range(32))
+        """Generate random nonce string using cryptographically secure random."""
+        return secrets.token_hex(16)  # 32 hex characters
 
     def generate_order_no(self) -> str:
         """Generate unique order number."""
         timestamp = int(time.time())
-        random_part = random.randint(1000, 9999)
+        random_part = secrets.randbelow(9000) + 1000
         return f"TH{timestamp}{random_part}"
 
     def calculate_sign(self, params: Dict[str, Any]) -> str:
@@ -67,6 +71,10 @@ class WeChatPayService:
         Returns:
             Dictionary with payment parameters for wx.requestPayment
         """
+        # Server-side amount verification
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+
         # Convert amount to fen (WeChat Pay uses fen)
         amount_fen = int(amount * 100)
 
@@ -103,7 +111,7 @@ class WeChatPayService:
         3. Extract prepay_id
         4. Generate signature for wx.requestPayment
         """
-        prepay_id = f"wx{int(time.time())}{random.randint(100000, 999999)}"
+        prepay_id = f"wx{int(time.time())}{secrets.randbelow(900000) + 100000}"
 
         # Generate parameters for wx.requestPayment
         timestamp = str(int(time.time()))

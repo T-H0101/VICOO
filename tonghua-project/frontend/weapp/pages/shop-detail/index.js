@@ -1,46 +1,6 @@
 var app = getApp()
 var request = require('../../utils/request')
 
-var MOCK_PRODUCTS = {
-  1: {
-    id: 1,
-    title: '森林呼吸帆布包',
-    price: 89.00,
-    original_price: 129.00,
-    description: '采用GOTS认证有机棉帆布，手感柔软，经久耐用。印有孩子们创作的森林主题画作，每售出一件，部分收益将捐赠给乡村儿童艺术教育项目。',
-    images: [
-      'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800',
-      'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800'
-    ],
-    supply_chain: [
-      { stage: '原料采购', description: '有机棉采购自新疆阿克苏生态农场，GOTS全球有机纺织品标准认证', location: '新疆·阿克苏', cert: 'GOTS有机认证' },
-      { stage: '纺织加工', description: '节水工艺织造帆布面料，相比传统工艺节水60%', location: '江苏·南通', cert: 'OEKO-TEX认证' },
-      { stage: '成品制造', description: 'BSCI认证公平贸易工厂手工缝制，工人享有合理薪酬', location: '广东·东莞', cert: 'BSCI认证' },
-      { stage: '质量检测', description: 'SGS第三方检测，涵盖28项安全指标', location: '上海', cert: 'SGS检测报告' }
-    ],
-    stock: 156,
-    sales: 342
-  },
-  2: {
-    id: 2,
-    title: '自然系列T恤',
-    price: 129.00,
-    original_price: 169.00,
-    description: '精梳有机棉T恤，柔软亲肤。印有孩子们描绘的自然主题画作，舒适与公益兼得。',
-    images: [
-      'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800'
-    ],
-    supply_chain: [
-      { stage: '原料采购', description: '有机棉原料采购，GOTS认证', location: '新疆', cert: 'GOTS有机认证' },
-      { stage: '纺织加工', description: '精梳棉纺织，环保染色', location: '山东·济南', cert: 'OEKO-TEX认证' },
-      { stage: '成品制造', description: '数码印花技术，减少水资源浪费', location: '广东·深圳', cert: 'BSCI认证' },
-      { stage: '质量检测', description: '全面质量检测通过', location: '上海', cert: 'SGS检测报告' }
-    ],
-    stock: 89,
-    sales: 215
-  }
-}
-
 Page({
   data: {
     product: null,
@@ -56,14 +16,26 @@ Page({
     var that = this
     that.setData({ loading: true })
 
-    setTimeout(function () {
-      var product = MOCK_PRODUCTS[id] || MOCK_PRODUCTS[1]
-      that.setData({
-        product: product,
-        loading: false
+    // Fetch product data from API instead of using mock data
+    request.get('/products/' + id)
+      .then(function (res) {
+        if (res.success && res.data) {
+          that.setData({
+            product: res.data,
+            loading: false
+          })
+          wx.setNavigationBarTitle({ title: res.data.title || '商品详情' })
+        } else {
+          // Fallback to error message
+          that.setData({ loading: false })
+          wx.showToast({ title: '商品加载失败', icon: 'none' })
+        }
       })
-      wx.setNavigationBarTitle({ title: product.title })
-    }, 300)
+      .catch(function (err) {
+        console.error('Failed to load product:', err)
+        that.setData({ loading: false })
+        wx.showToast({ title: '网络错误，请重试', icon: 'none' })
+      })
   },
   onImageChange: function (e) {
     this.setData({ currentImageIndex: e.detail.current })

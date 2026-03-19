@@ -29,8 +29,11 @@ LABEL description="Frontend SPA for Tonghua Public Welfare platform"
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy custom nginx configuration
-COPY ../../deploy/docker/nginx/nginx.conf /etc/nginx/conf.d/tonghua.conf
+# Install envsubst for environment variable substitution
+RUN apk add --no-cache gettext
+
+# Copy custom nginx configuration template
+COPY ../../deploy/docker/nginx/nginx.conf /etc/nginx/conf.d/tonghua.conf.template
 
 # Copy built React app from builder stage
 COPY --from=builder /build/dist /usr/share/nginx/html
@@ -51,5 +54,6 @@ EXPOSE 80
 HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --spider -q http://localhost:80 || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start nginx with environment variable substitution
+# API_URL defaults to empty (only same-origin requests allowed) if not set
+CMD ["sh", "-c", "envsubst '${API_URL}' < /etc/nginx/conf.d/tonghua.conf.template > /etc/nginx/conf.d/tonghua.conf && nginx -g 'daemon off;'"]

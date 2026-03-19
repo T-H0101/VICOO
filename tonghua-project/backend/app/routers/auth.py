@@ -78,8 +78,10 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     if os.getenv("APP_ENV") == "development":
         mock = _get_mock_user(body.email)
         if mock:
-            # Still validate password even for mock users
-            if mock.get("password", "password") != body.password:
+            # Security: Validate password even for mock users
+            # Use environment variable for mock password (no default)
+            mock_password = os.getenv("MOCK_USER_PASSWORD")
+            if mock_password != body.password:
                 raise HTTPException(status_code=401, detail="Invalid credentials")
             token = create_access_token(subject=str(mock["id"]), role=mock["role"])
             refresh = create_refresh_token(subject=str(mock["id"]))

@@ -16,7 +16,8 @@
       "Bash(npx tsc:*)",
       "Bash(npm run:*)",
       "Bash(./gradlew assembleDebug)",
-      "Bash(find . -name *.gitattributes -o -name .gitattributes)"
+      "Bash(find . -name *.gitattributes -o -name .gitattributes)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

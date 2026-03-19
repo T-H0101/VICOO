@@ -80,10 +80,16 @@ def decode_token(token: str) -> dict:
 
 # ── AES-256-GCM helpers ──────────────────────────────────────────
 def _get_aes_key() -> bytes:
+    """Get AES-256 key from environment variable.
+
+    Security: Uses SHA-256 hash to ensure exactly 32 bytes without insecure padding.
+    This prevents potential key truncation vulnerabilities.
+    """
+    import hashlib
     raw = settings.AES_KEY.encode("utf-8")
-    if len(raw) < 32:
-        raw = raw.ljust(32, b"\x00")
-    return raw[:32]
+    # Use SHA-256 hash to generate exactly 32 bytes from any input length
+    # This is more secure than zero-padding which can weaken key entropy
+    return hashlib.sha256(raw).digest()
 
 
 def aes_encrypt(plaintext: str) -> str:

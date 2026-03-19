@@ -186,29 +186,29 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // WeChat login button
+            // WeChat login button - Disabled pending WeChat SDK integration
             OutlinedButton(
                 onClick = {
-                    // TODO: Integrate WeChat SDK for OAuth flow
-                    // For now, this button is disabled pending SDK integration
-                    // Real implementation should:
-                    // 1. Initialize WXAPI with app ID: org.tonghua.app.data.api.WechatApi.APP_ID
-                    // 2. Call WXAPI.sendReq to trigger WeChat login
-                    // 3. Handle callback in WXEntryActivity
-                    // 4. Extract auth code from callback and call viewModel.wechatLogin(code)
-                    // Note: Hardcoded for demonstration only - remove before production
-                    viewModel.wechatLogin("mock_wechat_code")
+                    // WeChat SDK authentication flow is not yet implemented
+                    // This button is disabled to prevent security issues with mock authentication
+                    // Actual implementation requires WeChat Open Platform SDK integration:
+                    // 1. Register app with WeChat Open Platform and obtain APP_ID
+                    // 2. Initialize WXAPI with app ID
+                    // 3. Call WXAPI.sendReq to trigger WeChat login
+                    // 4. Handle callback in WXEntryActivity
+                    // 5. Extract auth code from callback and call viewModel.wechatLogin(code)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                enabled = !uiState.isLoading,
+                enabled = false, // Disabled until proper WeChat SDK integration is complete
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = DeepSepia),
                 shape = MaterialTheme.shapes.medium,
             ) {
                 Text(
-                    text = "Continue with WeChat (Demo)",
+                    text = "Continue with WeChat",
                     style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 )
             }
 
