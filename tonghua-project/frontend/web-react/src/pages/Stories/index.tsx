@@ -8,7 +8,7 @@ import EditorialHero from '@/components/editorial/EditorialHero';
 import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeading';
 import SepiaImageFrame from '@/components/editorial/SepiaImageFrame';
 import StoryQuoteBlock from '@/components/editorial/StoryQuoteBlock';
-import VintageInput from '@/components/editorial/VintageInput';
+import { VintageInput } from '@/components/editorial/VintageInput';
 
 type Category = 'all' | 'impact' | 'fashion' | 'community' | 'education';
 
@@ -97,11 +97,15 @@ export default function Stories() {
         {/* Category filter */}
         <div className="flex items-center gap-1 mb-12 border-b border-warm-gray/30 overflow-x-auto">
           {categories.map((cat, index) => (
-            <button
+            <motion.button
               key={cat}
               onClick={() => setActiveCategory(cat)}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ y: -2 }}
               className={`
-                font-body text-xs tracking-[0.15em] uppercase px-4 py-3 transition-all duration-200 border-b-2 -mb-px whitespace-nowrap
+                font-body text-xs tracking-[0.15em] uppercase px-4 py-3 transition-all duration-200 border-b-2 -mb-px whitespace-nowrap relative
                 ${activeCategory === cat
                   ? 'border-rust text-rust'
                   : 'border-transparent text-sepia-mid hover:text-ink'
@@ -112,7 +116,14 @@ export default function Stories() {
                 {String(index + 1).padStart(2, '0')}
               </span>
               {t(`stories.categories.${cat}`)}
-            </button>
+              {activeCategory === cat && (
+                <motion.span
+                  layoutId="story-category-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-px bg-rust"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+            </motion.button>
           ))}
         </div>
 

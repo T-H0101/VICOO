@@ -61,7 +61,7 @@ export default function Header() {
                     ${isActive ? 'text-rust' : 'text-ink-faded hover:text-ink'}
                   `}
                 >
-                  <span className="text-caption text-sepia-mid mr-1">
+                  <span className="text-[9px] tracking-[0.2em] text-sepia-mid mr-2 font-mono">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   {t(`nav.${item.key}`)}

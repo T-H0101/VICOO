@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 interface VintageInputProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLTextAreaElement> {
   label?: string;
-  type?: 'text' | 'email' | 'number' | 'textarea';
+  type?: 'text' | 'email' | 'number' | 'password' | 'textarea';
   helperText?: string;
   error?: string;
   icon?: 'search' | 'email' | 'user' | 'lock';
@@ -27,13 +27,28 @@ export const VintageInput = forwardRef<HTMLInputElement | HTMLTextAreaElement, V
       ${error ? 'border-archive-brown' : ''}
     `;
 
+    // Extract props that conflict with framer-motion types
+    const {
+      onDrag,
+      onDragEnd,
+      onDragEnter,
+      onDragExit,
+      onDragLeave,
+      onDragOver,
+      onDragStart,
+      onDrop,
+      onAnimationStart,
+      onAnimationEnd,
+      onAnimationIteration,
+      ...restProps
+    } = props;
+
     const inputProps = {
       id: inputId,
-      ref,
       'aria-describedby': error ? errorId : helperId,
       'aria-invalid': !!error,
       className: baseClasses + ' ' + className,
-      ...props,
+      ...restProps,
     };
 
     const iconSvg = icon === 'search' ? (
@@ -47,7 +62,7 @@ export const VintageInput = forwardRef<HTMLInputElement | HTMLTextAreaElement, V
     ) : null;
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         {label && (
           <label
             htmlFor={inputId}
@@ -57,29 +72,40 @@ export const VintageInput = forwardRef<HTMLInputElement | HTMLTextAreaElement, V
           </label>
         )}
 
-        {type === 'textarea' ? (
-          <motion.textarea
-            {...inputProps}
-            rows={4}
-            whileFocus={{ scale: 1.01 }}
-          />
-        ) : icon ? (
-          <div className="flex items-center border-b-2 border-warm-gray/60 focus-within:border-rust transition-colors">
-            {iconSvg}
+        <div className="relative">
+          {/* Decorative corner accents */}
+          <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-rust/30 pointer-events-none z-10" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-rust/30 pointer-events-none z-10" />
+
+          {type === 'textarea' ? (
+            <motion.textarea
+              {...inputProps}
+              ref={ref as React.Ref<HTMLTextAreaElement>}
+              rows={4}
+              whileFocus={{ scale: 1.01 }}
+              className={baseClasses + ' ' + className + ' pt-3 pl-3 pr-3'}
+            />
+          ) : icon ? (
+            <div className="flex items-center border-b-2 border-warm-gray/60 focus-within:border-rust transition-colors">
+              {iconSvg}
+              <motion.input
+                {...inputProps}
+                ref={ref as React.Ref<HTMLInputElement>}
+                type={type}
+                whileFocus={{ scale: 1.01 }}
+                className={baseClasses + ' ' + className + ' border-none pl-0'}
+              />
+            </div>
+          ) : (
             <motion.input
               {...inputProps}
+              ref={ref as React.Ref<HTMLInputElement>}
               type={type}
               whileFocus={{ scale: 1.01 }}
-              className={baseClasses + ' ' + className + ' border-none pl-0'}
+              className={baseClasses + ' ' + className + ' pt-3 pl-3 pr-3'}
             />
-          </div>
-        ) : (
-          <motion.input
-            {...inputProps}
-            type={type}
-            whileFocus={{ scale: 1.01 }}
-          />
-        )}
+          )}
+        </div>
 
         {helperText && (
           <p id={helperId} className="font-body text-[10px] text-sepia-mid/70">

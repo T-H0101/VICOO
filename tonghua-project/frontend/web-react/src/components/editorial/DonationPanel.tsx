@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import VintageInput from '@/components/editorial/VintageInput';
+import { VintageInput } from '@/components/editorial/VintageInput';
 
 interface DonationPanelProps {
   onSubmit?: (data: {

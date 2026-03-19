@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import PageWrapper from '@/components/layout/PageWrapper';
 import SectionContainer from '@/components/layout/SectionContainer';
 import EditorialHero from '@/components/editorial/EditorialHero';
-import VintageInput from '@/components/editorial/VintageInput';
+import { VintageInput } from '@/components/editorial/VintageInput';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Login() {

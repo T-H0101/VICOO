@@ -107,27 +107,52 @@ export default function Donate() {
       </SectionContainer>
 
       {/* Transparency */}
-      <section className="bg-aged-stock section-spacing">
+      <section className="bg-aged-stock section-spacing relative">
+        {/* Grain overlay */}
+        <div
+          className="absolute inset-0 z-0 pointer-events-none opacity-8"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+          }}
+          aria-hidden="true"
+        />
+
         <SectionContainer>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-            <div className="md:col-span-5">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative z-10">
+            <div className="md:col-span-5 relative">
+              {/* Decorative corner accents */}
+              <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-rust/30 pointer-events-none" />
+              <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-rust/30 pointer-events-none" />
+
               <h3 className="font-display text-h3 font-bold text-ink mb-4">
                 {t('donate.transparency.title')}
               </h3>
               <p className="font-body text-sm text-ink-faded leading-relaxed mb-6">
                 {t('donate.transparency.subtitle')}
               </p>
-              <button className="font-body text-xs text-rust tracking-[0.15em] uppercase hover:text-ink transition-colors">
+              <motion.button
+                className="font-body text-xs text-rust tracking-[0.15em] uppercase hover:text-ink transition-colors"
+                whileHover={{ x: 4 }}
+              >
                 {t('donate.transparency.viewReport')} &rarr;
-              </button>
+              </motion.button>
             </div>
             <div className="md:col-span-7">
               <div className="grid grid-cols-2 gap-4">
-                {['Q1 2026', 'Q4 2025', 'Q3 2025', 'Q2 2025'].map((quarter) => (
-                  <div
+                {['Q1 2026', 'Q4 2025', 'Q3 2025', 'Q2 2025'].map((quarter, index) => (
+                  <motion.div
                     key={quarter}
-                    className="border border-warm-gray/30 p-6 bg-paper hover:border-rust/30 transition-colors cursor-pointer"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    whileHover={{ y: -4 }}
+                    className="border border-warm-gray/30 p-6 bg-paper hover:border-rust/30 transition-colors cursor-pointer relative"
                   >
+                    {/* Corner accents */}
+                    <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-rust/20 pointer-events-none" />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-rust/20 pointer-events-none" />
+
                     <span className="font-body text-caption text-sepia-mid tracking-[0.15em]">
                       FINANCIAL REPORT
                     </span>
@@ -137,7 +162,7 @@ export default function Donate() {
                     <span className="font-body text-xs text-sepia-mid mt-2 block">
                       PDF &middot; 2.4 MB
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
