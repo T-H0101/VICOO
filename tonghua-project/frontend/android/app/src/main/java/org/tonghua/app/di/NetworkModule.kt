@@ -1,8 +1,10 @@
 package org.tonghua.app.di
 
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.tonghua.app.data.api.TonghuaApi
 import org.tonghua.app.data.repository.*
@@ -19,9 +21,9 @@ object NetworkModule {
     @Singleton
     fun provideAuthRepository(
         api: TonghuaApi,
-        tokenProvider: org.tonghua.app.data.api.TokenProvider,
+        @ApplicationContext context: Context,
     ): AuthRepository {
-        return AuthRepository(api, tokenProvider)
+        return AuthRepository(api, context)
     }
 
     @Provides

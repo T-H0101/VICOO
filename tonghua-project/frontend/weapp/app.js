@@ -1,8 +1,10 @@
+var config = require('./config');
+
 App({
   globalData: {
     userInfo: null,
     systemInfo: null,
-    baseUrl: 'https://api.tonghua.org/api/v1',
+    baseUrl: config.baseUrl,
     isConnected: true
   },
   onLaunch: function() {

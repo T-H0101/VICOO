@@ -1,5 +1,7 @@
 package org.tonghua.app.data.repository
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import org.tonghua.app.data.api.ApiResponse
 import org.tonghua.app.data.api.TonghuaApi
 import org.tonghua.app.data.model.AuthResponse
@@ -17,6 +19,7 @@ import javax.inject.Singleton
 @Singleton
 class AuthRepository @Inject constructor(
     private val api: TonghuaApi,
+    @ApplicationContext private val context: Context,
 ) {
     /**
      * Login with email and password.
@@ -73,10 +76,21 @@ class AuthRepository @Inject constructor(
      * Check if user is currently logged in.
      * NOTE: This is a client-side check. For server-side validation,
      * the API will return 401 if the session is invalid.
+     *
+     * Implementation: Checks for presence of session cookies in SharedPreferences.
+     * Cookies are persisted by AndroidCookieJar in the "tonghua_cookies" shared prefs.
+     *
+     * Note: This does NOT validate cookie expiration with the server.
+     * API calls will return 401 if the session is actually expired.
      */
     fun isLoggedIn(): Boolean {
-        // For now, always return true to let server handle session validation
-        // In a real implementation, you might check for a session cookie presence
-        return true
+        return try {
+            val prefs = context.getSharedPreferences("tonghua_cookies", Context.MODE_PRIVATE)
+            val cookies = prefs.getString("stored_cookies", "") ?: ""
+            // Check if cookies are present (non-empty string indicates active session)
+            cookies.isNotEmpty()
+        } catch (e: Exception) {
+            false
+        }
     }
 }

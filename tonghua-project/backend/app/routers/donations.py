@@ -92,27 +92,48 @@ async def donation_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{donation_id}", response_model=ApiResponse)
-async def get_donation(donation_id: int, db: AsyncSession = Depends(get_db)):
-    """Get a donation by ID."""
+async def get_donation(donation_id: int, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """Get a donation by ID.
+
+    Security: Only the donor or admin can access donation details.
+    Prevents IDOR (Insecure Direct Object Reference) attacks.
+    """
     try:
         stmt = select(Donation).where(Donation.id == donation_id)
         result = await db.execute(stmt)
         donation = result.scalar_one_or_none()
         if not donation:
             raise HTTPException(status_code=404, detail="Donation not found")
+
+        # Authorization check: only admin or the donor can access
+        if current_user.get("role") != "admin" and donation.donor_user_id != current_user.get("id"):
+            # Handle anonymous donations (donor_user_id is None)
+            if donation.donor_user_id is not None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Access denied. You can only view your own donations or must be an administrator."
+                )
+
         return ApiResponse(data=DonationOut.model_validate(donation).model_dump())
     except HTTPException:
         raise
     except Exception:
         for d in _mock_donations:
             if d["id"] == donation_id:
+                # Authorization check for mock data
+                if current_user.get("role") != "admin" and d.get("donor_user_id") != current_user.get("id"):
+                    if d.get("donor_user_id") is not None:
+                        raise HTTPException(
+                            status_code=403,
+                            detail="Access denied. You can only view your own donations or must be an administrator."
+                        )
                 return ApiResponse(data=d)
         raise HTTPException(status_code=404, detail="Donation not found")
 
 
 @router.post("", response_model=ApiResponse, status_code=201)
 @router.post("/create", response_model=ApiResponse, status_code=201)
-async def create_donation(body: DonationCreate, db: AsyncSession = Depends(get_db)):
+async def create_donation(body: DonationCreate, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
     """Create a new donation.
 
     Returns donation data plus WeChat payment parameters if payment_method is 'wechat'.

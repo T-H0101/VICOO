@@ -29,10 +29,9 @@ function request(options) {
       header: {
         'Content-Type': 'application/json',
         'X-Timestamp': Date.now().toString(),
-        'X-Nonce': generateNonce(),
-        'Authorization': getApp().globalData.token ? 'Bearer ' + getApp().globalData.token : ''
+        'X-Nonce': generateNonce()
       },
-      withCredentials: true, // Enable cookie support if needed, though we use Bearer tokens here
+      withCredentials: true // Use httpOnly Cookie authentication
       success: function(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data);
@@ -65,8 +64,8 @@ function request(options) {
   });
 }
 
-// Token is managed client-side via Bearer token in Authorization header.
-// Token refresh logic should be implemented if needed (e.g., using refresh token).
+// Authentication is managed via httpOnly Cookie.
+// Server handles session management through Set-Cookie headers.
 
 function get(url, data) {
   return request({ url: url, method: 'GET', data: data });
@@ -93,15 +92,20 @@ function upload(url, filePath, name, formData) {
       formData: formData || {},
       header: {
         'X-Timestamp': Date.now().toString(),
-        'X-Nonce': generateNonce(),
-        'Authorization': getApp().globalData.token ? 'Bearer ' + getApp().globalData.token : ''
+        'X-Nonce': generateNonce()
       },
-      withCredentials: true, // Enable cookie support if needed, though we use Bearer tokens here
+      withCredentials: true // Use httpOnly Cookie authentication
       success: function(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try {
-            resolve(JSON.parse(res.data));
+            var data = JSON.parse(res.data);
+            if (data.success !== false) {
+              resolve(data);
+            } else {
+              reject(new Error(data.message || 'Upload failed'));
+            }
           } catch (e) {
+            // If response is not JSON (e.g., plain text), resolve with it
             resolve(res.data);
           }
         } else if (res.statusCode === 401) {
@@ -109,11 +113,16 @@ function upload(url, filePath, name, formData) {
           wx.navigateTo({ url: '/pages/user/login/index' });
           reject(new Error('Session expired. Please log in again.'));
         } else {
-          reject(new Error('Upload failed: ' + res.statusCode));
+          var msg = 'Upload failed: ' + res.statusCode;
+          try {
+            var errData = JSON.parse(res.data);
+            if (errData.message) msg = errData.message;
+          } catch (e) { /* ignore */ }
+          reject(new Error(msg));
         }
       },
       fail: function(err) {
-        wx.showToast({ title: '上传失败', icon: 'none' });
+        wx.showToast({ title: '网络错误', icon: 'none' });
         reject(err);
       }
     });
