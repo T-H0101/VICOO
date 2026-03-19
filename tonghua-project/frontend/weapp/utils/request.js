@@ -5,17 +5,18 @@ var isRefreshing = false;
 var refreshQueue = [];
 
 function generateNonce() {
-  // Use crypto-safe random bytes for nonce
+  // Use wx.getRandomValues for secure random bytes (WeChat MiniProgram API)
   var array = new Uint8Array(16);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+  if (typeof wx !== 'undefined' && wx.getRandomValues) {
+    wx.getRandomValues(array);
+  } else if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(array);
   } else {
-    // Fallback: use multiple Math.random calls with timestamp
+    // Fallback: use timestamp-based pseudo-random (less secure but functional)
+    var timestamp = Date.now();
     for (var i = 0; i < 16; i++) {
-      array[i] = Math.floor(Math.random() * 256);
+      array[i] = (timestamp * (i + 1) * 1103515245) & 0xFF;
     }
-    array[0] ^= Date.now() & 0xFF;
-    array[1] ^= (Date.now() >> 8) & 0xFF;
   }
   return Array.from(array).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
 }
@@ -31,7 +32,7 @@ function request(options) {
         'X-Timestamp': Date.now().toString(),
         'X-Nonce': generateNonce()
       },
-      withCredentials: true // Use httpOnly Cookie authentication
+      withCredentials: true, // Use httpOnly Cookie authentication
       success: function(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data);
@@ -94,7 +95,7 @@ function upload(url, filePath, name, formData) {
         'X-Timestamp': Date.now().toString(),
         'X-Nonce': generateNonce()
       },
-      withCredentials: true // Use httpOnly Cookie authentication
+      withCredentials: true, // Use httpOnly Cookie authentication
       success: function(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try {

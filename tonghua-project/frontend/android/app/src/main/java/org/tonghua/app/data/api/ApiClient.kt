@@ -1,6 +1,8 @@
 package org.tonghua.app.data.api
 
 import android.content.Context
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -62,10 +64,22 @@ class ApiClient @Inject constructor(
 
 /**
  * Cookie jar implementation for Android that persists cookies across app sessions.
- * Uses SharedPreferences to store cookies.
+ * Uses EncryptedSharedPreferences to securely store cookies.
  */
 class AndroidCookieJar(private val context: Context) : CookieJar {
-    private val prefs = context.getSharedPreferences("tonghua_cookies", Context.MODE_PRIVATE)
+    private val prefs by lazy {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        EncryptedSharedPreferences.create(
+            context,
+            "tonghua_cookies_encrypted",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
     private val cookieKey = "stored_cookies"
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
