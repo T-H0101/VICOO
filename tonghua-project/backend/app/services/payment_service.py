@@ -42,19 +42,23 @@ class WeChatPayService:
 
     def calculate_sign(self, params: Dict[str, Any]) -> str:
         """
-        Calculate WeChat Pay signature (MD5).
+        Calculate WeChat Pay signature (SHA256).
 
         WeChat Pay signature algorithm:
         1. Sort parameters by key
         2. Concatenate key=value pairs
         3. Add API key at the end
-        4. MD5 hash the result
+        4. SHA256 hash the result
+
+        Security note: WeChat Pay supports both MD5 and SHA256. SHA256 is cryptographically
+        stronger and should be used in production. The API key must be properly configured
+        in the WeChat Pay merchant backend.
         """
         sorted_params = sorted([(k, v) for k, v in params.items() if v is not None and v != ""])
         sign_str = "&".join([f"{k}={v}" for k, v in sorted_params])
         sign_str += f"&key={self.api_key}"
 
-        return hashlib.md5(sign_str.encode('utf-8')).hexdigest().upper()
+        return hashlib.sha256(sign_str.encode('utf-8')).hexdigest().upper()
 
     def create_unified_order(self, order_no: str, amount: Decimal, description: str, trade_type: str = "JSAPI", openid: Optional[str] = None, donation_id: Optional[int] = None) -> Dict[str, Any]:
         """
@@ -124,7 +128,7 @@ class WeChatPayService:
             "timeStamp": timestamp,
             "nonceStr": nonce_str,
             "package": package,
-            "signType": "MD5",
+            "signType": "SHA256",
         }
 
         pay_sign = self.calculate_sign(sign_params)
@@ -133,7 +137,7 @@ class WeChatPayService:
             "timeStamp": timestamp,
             "nonceStr": nonce_str,
             "package": package,
-            "signType": "MD5",
+            "signType": "SHA256",
             "paySign": pay_sign,
             "transactionId": prepay_id,  # WeChat prepay_id serves as transaction ID for verification
             "order_no": order_no,

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useUIStore } from '@/stores/uiStore';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useRef, useEffect } from 'react';
 
 const NAV_ITEMS = [
   { key: 'home', path: '/' },
@@ -19,8 +20,14 @@ export default function Header() {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { mobileNavOpen, toggleMobileNav, setMobileNavOpen, currentLocale, setLocale } =
+  const { mobileNavOpen, toggleMobileNav, setMobileNavOpen, currentLocale, setLocale, setMenuTriggerRef } =
     useUIStore();
+
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setMenuTriggerRef(menuTriggerRef);
+  }, [setMenuTriggerRef]);
 
   const toggleLocale = () => {
     const next = currentLocale === 'en' ? 'zh' : 'en';
@@ -84,10 +91,12 @@ export default function Header() {
           {/* Mobile hamburger */}
           {isMobile && (
             <button
+              ref={menuTriggerRef}
               onClick={toggleMobileNav}
               className="flex flex-col gap-1.5 p-2"
               aria-label="Toggle menu"
               aria-expanded={mobileNavOpen}
+              aria-controls="mobile-navigation"
             >
               <motion.span
                 animate={mobileNavOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}

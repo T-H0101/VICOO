@@ -294,6 +294,15 @@
     "copyright": "© 2026 Tonghua Public Welfare. All rights reserved.",
     "issueNo": "Issue No. 01 — Inaugural Edition"
   },
+  "artwork": {
+    "detail": {
+      "heading": "Artwork",
+      "artist": "Artist",
+      "vote": "Vote for this Artwork",
+      "votes": "Votes",
+      "tags": "Tags"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",

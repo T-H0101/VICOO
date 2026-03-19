@@ -1,4 +1,5 @@
 from typing import Optional
+import logging
 
 from fastapi import Depends, HTTPException, Header, Request
 from jose import JWTError
@@ -10,6 +11,9 @@ from app.database import get_db
 from app.models.user import User
 from app.security import decode_token
 from app.config import settings
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 # Redis client for rate limiting
 redis_client = None
@@ -75,8 +79,9 @@ async def rate_limit_check(request: Request, current_user: Optional[dict] = None
     """Rate limiting using Redis sliding window algorithm.
 
     Limits:
-    - Global: 1000 requests per second (burst allowed for slight accommodation)
-    - User: 60 requests per minute (if user is authenticated)
+    - Global: 1000 requests per minute (for all requests)
+    - User: 60 requests per minute (for authenticated users)
+    - Public endpoints: 20 requests per minute per IP (for login/register/reset)
 
     Returns True if the request is allowed, raises HTTPException 429 if rate limited.
     """
@@ -103,9 +108,28 @@ async def rate_limit_check(request: Request, current_user: Optional[dict] = None
                     status_code=429,
                     detail="Too many requests. Please slow down."
                 )
-        except redis.RedisError:
-            # If Redis fails, allow the request but log the issue
-            pass
+        except redis.RedisError as e:
+            # Fail closed: Redis is critical for rate limiting
+            logger.error(f"Redis connection failed during global rate limiting: {e}")
+            raise HTTPException(status_code=503, detail="Service temporarily unavailable")
+
+        # Public endpoint rate limit: 20 requests per minute per IP for auth endpoints
+        public_endpoints = ["/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/wx-login"]
+        if request.url.path in public_endpoints:
+            public_key = f"rate_limit:public:{client_ip}:{int(current_time // 60)}"
+            try:
+                public_count = await redis_client.incr(public_key)
+                if public_count == 1:
+                    await redis_client.expire(public_key, 60)  # 1 minute window
+                if public_count > 20:
+                    raise HTTPException(
+                        status_code=429,
+                        detail="Too many requests. Please try again later."
+                    )
+            except redis.RedisError as e:
+                # Fail closed: Redis is critical for rate limiting
+                logger.error(f"Redis connection failed during public endpoint rate limiting: {e}")
+                raise HTTPException(status_code=503, detail="Service temporarily unavailable")
 
         # User-specific rate limit: 60 requests per minute (if authenticated)
         if current_user and "id" in current_user:
@@ -120,9 +144,10 @@ async def rate_limit_check(request: Request, current_user: Optional[dict] = None
                         status_code=429,
                         detail="Too many requests. Please slow down."
                     )
-            except redis.RedisError:
-                # If Redis fails, allow the request but log the issue
-                pass
+            except redis.RedisError as e:
+                # Fail closed: Redis is critical for rate limiting
+                logger.error(f"Redis connection failed during user rate limiting: {e}")
+                raise HTTPException(status_code=503, detail="Service temporarily unavailable")
 
         return True
     except HTTPException:
@@ -138,7 +163,10 @@ async def get_current_user_from_request(request: Request, db: AsyncSession) -> O
     if not authorization or not authorization.startswith("Bearer "):
         return None
 
-    token = authorization.split(" ", 1)[1]
+    parts = authorization.split(" ", 1)
+    if len(parts) < 2:
+        return None
+    token = parts[1]
     try:
         payload = decode_token(token)
         if payload.get("type") != "access":

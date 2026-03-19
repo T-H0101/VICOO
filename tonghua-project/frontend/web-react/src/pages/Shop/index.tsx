@@ -7,6 +7,7 @@ import SectionContainer from '@/components/layout/SectionContainer';
 import EditorialHero from '@/components/editorial/EditorialHero';
 import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeading';
 import ProductCard from '@/components/editorial/ProductCard';
+import VintageSelect from '@/components/editorial/VintageSelect';
 import { productsApi } from '@/services/products';
 import type { Product } from '@/types';
 
@@ -175,20 +176,13 @@ export default function Shop() {
 
           {/* Sort */}
           <div className="flex items-center gap-3 flex-shrink-0">
-            <span className="font-body text-[10px] text-sepia-mid tracking-[0.2em] uppercase">
-              {t('shop.sort.label')}
-            </span>
-            <select
+            <VintageSelect
+              label={t('shop.sort.label')}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="font-body text-xs text-ink bg-transparent border-b border-warm-gray/40 focus:border-rust py-1 pr-6 appearance-none cursor-pointer transition-colors"
-            >
-              {sortOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              options={sortOptions}
+              className="w-auto"
+            />
           </div>
         </div>
 

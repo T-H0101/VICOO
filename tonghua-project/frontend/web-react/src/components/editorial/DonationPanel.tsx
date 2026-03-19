@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import VintageInput from '@/components/editorial/VintageInput';
 
 interface DonationPanelProps {
   onSubmit?: (data: {
@@ -56,45 +57,65 @@ export default function DonationPanel({
       <form onSubmit={handleSubmit}>
         {/* Amount Presets */}
         <div className="grid grid-cols-2 gap-3 mb-8">
-          {AMOUNT_PRESETS.map((amount) => (
-            <button
+          {AMOUNT_PRESETS.map((amount, index) => (
+            <motion.button
               key={amount}
               type="button"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 setSelectedAmount(amount);
                 setCustomAmount('');
               }}
               className={`
-                border p-4 text-center transition-all duration-200 cursor-pointer
-                ${
-                  selectedAmount === amount && !customAmount
-                    ? 'border-rust bg-rust/[0.04]'
-                    : 'border-warm-gray hover:border-rust'
+                relative p-4 text-center transition-all duration-300 cursor-pointer overflow-hidden
+                ${selectedAmount === amount && !customAmount
+                  ? 'border-2 border-rust bg-rust/[0.04]'
+                  : 'border border-warm-gray/60 hover:border-rust/60 bg-paper'
                 }
               `}
             >
-              <span className="block font-display text-[clamp(20px,2.5vw,28px)] font-extrabold text-ink">
-                {amount}
-              </span>
-              <span className="block font-body text-[10px] tracking-[0.1em] uppercase text-sepia-mid mt-1">
-                {t('donate.form.currency')}
-              </span>
-            </button>
+              {/* Grain overlay */}
+              <div className="absolute inset-0 z-10 pointer-events-none opacity-10" style={{
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")'
+              }} />
+
+              {/* Sepia accent gradient */}
+              <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-br from-pale-gold/3 via-transparent to-archive-brown/5" />
+
+              {/* Active indicator */}
+              {selectedAmount === amount && !customAmount && (
+                <motion.div
+                  className="absolute inset-0 z-0 bg-rust/[0.04]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                />
+              )}
+
+              <div className="relative z-20">
+                <span className="block font-display text-[clamp(20px,2.5vw,28px)] font-extrabold text-ink">
+                  {amount}
+                </span>
+                <span className="block font-body text-[10px] tracking-[0.1em] uppercase text-sepia-mid mt-1">
+                  {t('donate.form.currency')}
+                </span>
+              </div>
+            </motion.button>
           ))}
         </div>
 
         {/* Custom Amount */}
         <div className="mb-8">
-          <label className="block font-body text-xs tracking-[0.05em] text-sepia-mid mb-2">
-            {t('donate.form.customAmount')}
-          </label>
-          <input
+          <VintageInput
+            label={t('donate.form.customAmount')}
             type="number"
-            min="1"
             value={customAmount}
             onChange={(e) => setCustomAmount(e.target.value)}
             placeholder={t('donate.form.placeholder')}
-            className="w-full p-4 font-display text-[clamp(24px,3vw,36px)] font-extrabold text-ink border-b-2 border-ink bg-transparent outline-none transition-colors focus:border-rust placeholder:text-warm-gray"
+            min="1"
           />
         </div>
 
@@ -127,14 +148,14 @@ export default function DonationPanel({
 
         {/* Options */}
         <div className="mb-8">
-          <input
+          <VintageInput
+            label={t('donate.form.message')}
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t('donate.form.message')}
-            className="w-full p-4 font-body text-sm text-ink border-b border-warm-gray bg-transparent outline-none transition-colors focus:border-rust placeholder:text-sepia-mid/60"
           />
-          <label className="flex items-center gap-2 mt-4 cursor-pointer">
+          <label className="flex items-center gap-2 mt-6 cursor-pointer">
             <input
               type="checkbox"
               checked={anonymous}

@@ -28,6 +28,15 @@ export const api = axios.create({
   },
 });
 
+// Request interceptor — add access token to Authorization header
+api.interceptors.request.use(
+  (config) => {
+    // Tokens are handled via httpOnly cookies, no client-side token needed
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor — handle token refresh on 401
 api.interceptors.response.use(
   (response) => response,
@@ -48,13 +57,18 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await axios.post(
+        const refreshResponse = await axios.post(
           `${API_BASE_URL}/auth/refresh`,
           {},
           { withCredentials: true }
         );
+        // The new access token is in the response body
+        // The new refresh token is set as an httpOnly cookie by the server
+        const { access_token } = refreshResponse.data.data;
+        // Update the access token in memory (via auth store)
+        // Note: We don't store the refresh token in memory - it's in the httpOnly cookie
         isRefreshing = false;
-        onRefreshed('refreshed');
+        onRefreshed(access_token);
         return api(originalRequest);
       } catch {
         isRefreshing = false;

@@ -1,14 +1,40 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
 from app.database import get_db
 from app.models.artwork import Artwork
+from app.models.user import ChildParticipant
 from app.schemas import ApiResponse, ArtworkCreate, ArtworkOut, ArtworkUpdate, ArtworkStatusUpdate, PaginatedResponse
+from app.schemas.artwork import ChildParticipantForArtwork
 from app.deps import require_role
 
 router = APIRouter(prefix="/artworks", tags=["Artworks"])
+
+
+def _convert_child_participant(cp: ChildParticipant | None) -> ChildParticipantForArtwork | None:
+    """Convert database ChildParticipant to frontend-compatible format."""
+    if cp is None:
+        return None
+    return ChildParticipantForArtwork(
+        id=str(cp.id),
+        firstName=cp.display_name,
+        age=cp.age,
+        guardianId=None,  # Not stored in backend for security
+        schoolName=getattr(cp, "school", None),
+        consentGiven=getattr(cp, "consent_given", False),
+        consentDate=getattr(cp, "consent_date", None).isoformat() if getattr(cp, "consent_date", None) else None,
+        status=getattr(cp, "status", "active"),
+    )
+
+
+def _serialize_artwork(artwork: Artwork) -> dict:
+    """Serialize artwork with child participant data."""
+    artwork_dict = ArtworkOut.model_validate(artwork).model_dump()
+    artwork_dict["childParticipant"] = _convert_child_participant(artwork.child_participant)
+    return artwork_dict
 
 _mock_artworks = [
     {
@@ -64,7 +90,7 @@ async def list_artworks(
 ):
     """List artworks with optional filtering and pagination."""
     try:
-        stmt = select(Artwork)
+        stmt = select(Artwork).options(selectinload(Artwork.child_participant))
         if status:
             stmt = stmt.where(Artwork.status == status)
         if campaign_id is not None:
@@ -75,7 +101,7 @@ async def list_artworks(
         result = await db.execute(stmt)
         artworks = result.scalars().all()
         return PaginatedResponse(
-            data=[ArtworkOut.model_validate(a).model_dump() for a in artworks],
+            data=[_serialize_artwork(a) for a in artworks],
             total=total,
             page=page,
             page_size=page_size,
@@ -99,14 +125,27 @@ async def list_artworks(
 async def get_artwork(artwork_id: int, db: AsyncSession = Depends(get_db)):
     """Get a single artwork by ID."""
     try:
-        stmt = select(Artwork).where(Artwork.id == artwork_id)
+        # First, fetch the artwork to check existence
+        stmt = select(Artwork).options(selectinload(Artwork.child_participant)).where(Artwork.id == artwork_id)
         result = await db.execute(stmt)
         artwork = result.scalar_one_or_none()
         if not artwork:
             raise HTTPException(status_code=404, detail="Artwork not found")
-        artwork.view_count += 1
-        await db.flush()
-        return ApiResponse(data=ArtworkOut.model_validate(artwork).model_dump())
+
+        # Use atomic UPDATE to increment view_count to prevent race conditions
+        update_stmt = (
+            update(Artwork)
+            .where(Artwork.id == artwork_id)
+            .values(view_count=Artwork.view_count + 1)
+        )
+        await db.execute(update_stmt)
+
+        # Fetch the updated artwork with child participant
+        updated_stmt = select(Artwork).options(selectinload(Artwork.child_participant)).where(Artwork.id == artwork_id)
+        result = await db.execute(updated_stmt)
+        artwork = result.scalar_one_or_none()
+
+        return ApiResponse(data=_serialize_artwork(artwork))
     except HTTPException:
         raise
     except Exception:
@@ -123,7 +162,9 @@ async def create_artwork(body: ArtworkCreate, db: AsyncSession = Depends(get_db)
         artwork = Artwork(**body.model_dump())
         db.add(artwork)
         await db.flush()
-        return ApiResponse(data=ArtworkOut.model_validate(artwork).model_dump())
+        # Refresh to get the child_participant relationship if present
+        await db.refresh(artwork, ["child_participant"])
+        return ApiResponse(data=_serialize_artwork(artwork))
     except Exception:
         new_id = max(a["id"] for a in _mock_artworks) + 1 if _mock_artworks else 1
         new_artwork = {"id": new_id, **body.model_dump(), "status": "draft", "vote_count": 0, "view_count": 0, "created_at": "2025-06-01T00:00:00", "updated_at": "2025-06-01T00:00:00"}
@@ -135,7 +176,7 @@ async def create_artwork(body: ArtworkCreate, db: AsyncSession = Depends(get_db)
 async def update_artwork(artwork_id: int, body: ArtworkUpdate, db: AsyncSession = Depends(get_db)):
     """Update an artwork."""
     try:
-        stmt = select(Artwork).where(Artwork.id == artwork_id)
+        stmt = select(Artwork).options(selectinload(Artwork.child_participant)).where(Artwork.id == artwork_id)
         result = await db.execute(stmt)
         artwork = result.scalar_one_or_none()
         if not artwork:
@@ -143,7 +184,8 @@ async def update_artwork(artwork_id: int, body: ArtworkUpdate, db: AsyncSession 
         for k, v in body.model_dump(exclude_unset=True).items():
             setattr(artwork, k, v)
         await db.flush()
-        return ApiResponse(data=ArtworkOut.model_validate(artwork).model_dump())
+        await db.refresh(artwork, ["child_participant"])
+        return ApiResponse(data=_serialize_artwork(artwork))
     except HTTPException:
         raise
     except Exception:
@@ -158,14 +200,15 @@ async def update_artwork(artwork_id: int, body: ArtworkUpdate, db: AsyncSession 
 async def update_artwork_status(artwork_id: int, body: ArtworkStatusUpdate, db: AsyncSession = Depends(get_db)):
     """Update artwork status."""
     try:
-        stmt = select(Artwork).where(Artwork.id == artwork_id)
+        stmt = select(Artwork).options(selectinload(Artwork.child_participant)).where(Artwork.id == artwork_id)
         result = await db.execute(stmt)
         artwork = result.scalar_one_or_none()
         if not artwork:
             raise HTTPException(status_code=404, detail="Artwork not found")
         artwork.status = body.status
         await db.flush()
-        return ApiResponse(data=ArtworkOut.model_validate(artwork).model_dump())
+        await db.refresh(artwork, ["child_participant"])
+        return ApiResponse(data=_serialize_artwork(artwork))
     except HTTPException:
         raise
     except Exception:
@@ -180,7 +223,7 @@ async def update_artwork_status(artwork_id: int, body: ArtworkStatusUpdate, db: 
 async def vote_artwork(artwork_id: int, db: AsyncSession = Depends(get_db)):
     """Vote for an artwork."""
     try:
-        stmt = select(Artwork).where(Artwork.id == artwork_id)
+        stmt = select(Artwork).options(selectinload(Artwork.child_participant)).where(Artwork.id == artwork_id)
         result = await db.execute(stmt)
         artwork = result.scalar_one_or_none()
         if not artwork:
@@ -189,8 +232,9 @@ async def vote_artwork(artwork_id: int, db: AsyncSession = Depends(get_db)):
         # Update vote count (using like_count in DB, which maps to vote_count in schema)
         artwork.like_count += 1
         await db.flush()
+        await db.refresh(artwork, ["child_participant"])
 
-        return ApiResponse(data=ArtworkOut.model_validate(artwork).model_dump())
+        return ApiResponse(data=_serialize_artwork(artwork))
     except HTTPException:
         raise
     except Exception:

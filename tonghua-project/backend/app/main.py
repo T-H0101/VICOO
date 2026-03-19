@@ -1,14 +1,20 @@
 import logging
 import time
+import re
 from contextlib import asynccontextmanager
+from typing import Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import engine, Base, AsyncSessionLocal
 from app.deps import rate_limit_check, get_current_user_from_request
+
+# Maximum allowed request body size (10 MB)
+MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
 
 logger = logging.getLogger("tonghua")
 logging.basicConfig(
@@ -37,14 +43,62 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
+# Security: Only allow specific hosts
+# Configure allowed hosts via CORS_ORIGINS or add a dedicated setting
+# TrustedHostMiddleware expects hostnames (with optional port), e.g., "example.com" or "localhost:8000"
+def extract_host(url: str) -> str:
+    """Extract host:port from a URL or host string."""
+    url = url.strip()
+    if "://" in url:
+        # Remove scheme (e.g., "https://") and path
+        netloc = url.split("://", 1)[1].split("/", 1)[0]
+    else:
+        # No scheme, assume it's just host:port or domain
+        netloc = url.split("/", 1)[0]
+    return netloc
+
+allowed_hosts = [extract_host(origin) for origin in settings.CORS_ORIGINS]
+if not allowed_hosts:
+    allowed_hosts = ["localhost"]
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
+# CORS - Restrict to specific origins (no wildcard)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Requested-With",
+        "X-Signature",
+        "X-Timestamp",
+    ],
 )
+
+
+# ── Request size limit middleware ─────────────────────────────────
+@app.middleware("http")
+async def request_size_limit_middleware(request: Request, call_next):
+    """Limit request body size to prevent DoS attacks."""
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            size = int(content_length)
+            if size > MAX_REQUEST_BODY_SIZE:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "success": False,
+                        "data": None,
+                        "message": "Request body too large",
+                    },
+                )
+        except ValueError:
+            pass
+    response = await call_next(request)
+    return response
 
 
 # ── Rate Limiting middleware (applied before logging) ────────────
@@ -57,10 +111,27 @@ async def rate_limit_middleware(request: Request, call_next):
             async with AsyncSessionLocal() as db:
                 current_user = await get_current_user_from_request(request, db)
                 await rate_limit_check(request, current_user)
+        except HTTPException:
+            # Re-raise rate limit errors (429) or auth errors (401)
+            raise
         except Exception:
-            # If rate limiting fails, let the request continue (fails open)
+            # Fail open if DB connection or other system errors occur
             pass
     response = await call_next(request)
+    return response
+
+
+# ── Security headers middleware ───────────────────────────────────
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    # Content Security Policy
+    # Note: This is restrictive; adjust if serving specific assets or headers.
+    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
 

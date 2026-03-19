@@ -8,6 +8,7 @@ import EditorialHero from '@/components/editorial/EditorialHero';
 import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeading';
 import SepiaImageFrame from '@/components/editorial/SepiaImageFrame';
 import StoryQuoteBlock from '@/components/editorial/StoryQuoteBlock';
+import VintageInput from '@/components/editorial/VintageInput';
 
 type Category = 'all' | 'impact' | 'fashion' | 'community' | 'education';
 
@@ -208,13 +209,13 @@ export default function Stories() {
               title={t('stories.newsletter.title')}
               subtitle={t('stories.newsletter.subtitle')}
             />
-            <div className="mt-8 flex items-center border-b border-warm-gray/40 focus-within:border-rust transition-colors max-w-md mx-auto">
-              <input
+            <div className="mt-8 flex items-center gap-4 max-w-md mx-auto border-b border-warm-gray/40 pb-2">
+              <VintageInput
                 type="email"
                 placeholder={t('stories.newsletter.placeholder')}
-                className="flex-1 font-body text-sm bg-transparent py-3 focus:outline-none text-ink placeholder:text-warm-gray"
+                className="flex-1"
               />
-              <button className="font-body text-xs tracking-[0.15em] uppercase text-rust hover:text-ink transition-colors ml-4 flex-shrink-0">
+              <button className="font-body text-xs tracking-[0.15em] uppercase text-rust hover:text-ink transition-colors flex-shrink-0">
                 {t('stories.newsletter.subscribe')} &rarr;
               </button>
             </div>

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import PageWrapper from '@/components/layout/PageWrapper';
 import SectionContainer from '@/components/layout/SectionContainer';
 import EditorialHero from '@/components/editorial/EditorialHero';
+import VintageInput from '@/components/editorial/VintageInput';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Login() {
@@ -36,31 +37,21 @@ export default function Login() {
 
       <SectionContainer narrow>
         <form onSubmit={handleSubmit} className="space-y-8">
-          <div>
-            <label className="font-body text-xs text-sepia-mid tracking-wider uppercase block mb-2">
-              {t('login.email')}
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full font-body text-sm py-3 border-b border-warm-gray/40 focus:border-rust transition-colors bg-transparent"
-            />
-          </div>
+          <VintageInput
+            label={t('login.email')}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-          <div>
-            <label className="font-body text-xs text-sepia-mid tracking-wider uppercase block mb-2">
-              {t('login.password')}
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full font-body text-sm py-3 border-b border-warm-gray/40 focus:border-rust transition-colors bg-transparent"
-            />
-          </div>
+          <VintageInput
+            label={t('login.password')}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer">

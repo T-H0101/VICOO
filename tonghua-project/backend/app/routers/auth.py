@@ -1,9 +1,11 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.schemas import ApiResponse, LoginRequest, RegisterRequest, RefreshRequest, TokenResponse, UserCreate
@@ -36,19 +38,55 @@ def _get_mock_user(email: str) -> dict | None:
 
 
 @router.post("/login", response_model=ApiResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     """Login via email+password or WeChat code."""
     # ── WeChat login ──
     if body.wechat_code:
-        # In production: exchange code via wechat API (code2Session)
-        token = create_access_token(subject="wechat_user", role="user")
-        refresh = create_refresh_token(subject="wechat_user")
-        return ApiResponse(
-            success=True,
-            data=TokenResponse(
-                access_token=token, refresh_token=refresh, expires_in=900
-            ).model_dump(),
-        )
+        # 调用微信 code2Session 接口验证 Code 的有效性
+        if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:
+            raise HTTPException(status_code=500, detail="WeChat configuration is missing")
+
+        async with httpx.AsyncClient() as client:
+            wx_response = await client.get(
+                f"https://api.weixin.qq.com/sns/jscode2session?"
+                f"appid={settings.WECHAT_APP_ID}&"
+                f"secret={settings.WECHAT_APP_SECRET}&"
+                f"js_code={body.wechat_code}&grant_type=authorization_code"
+            )
+
+            if wx_response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid WeChat code")
+
+            session_data = wx_response.json()
+
+            # 检查微信 API 返回的错误
+            if "errcode" in session_data and session_data["errcode"] != 0:
+                error_msg = session_data.get("errmsg", "WeChat authentication failed")
+                raise HTTPException(status_code=401, detail=f"WeChat authentication failed: {error_msg}")
+
+            openid = session_data.get("openid")
+            if not openid:
+                raise HTTPException(status_code=401, detail="WeChat authentication failed")
+
+            # 使用 openid 创建 JWT token
+            token = create_access_token(subject=openid, role="user", extra={"openid": openid})
+            refresh = create_refresh_token(subject=openid)
+
+            # Set refresh token as httpOnly cookie
+            response.set_cookie(
+                key="refresh_token",
+                value=refresh,
+                httponly=True,
+                secure=True,
+                samesite="lax",
+                max_age=7 * 24 * 60 * 60,  # 7 days
+            )
+            return ApiResponse(
+                success=True,
+                data=TokenResponse(
+                    access_token=token, refresh_token=refresh, expires_in=900
+                ).model_dump(),
+            )
 
     if not body.email or not body.password:
         raise HTTPException(status_code=400, detail="Email and password are required")
@@ -61,6 +99,15 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         if user and verify_password(body.password, user.password_hash):
             token = create_access_token(subject=str(user.id), role=user.role)
             refresh = create_refresh_token(subject=str(user.id))
+            # Set refresh token as httpOnly cookie
+            response.set_cookie(
+                key="refresh_token",
+                value=refresh,
+                httponly=True,
+                secure=True,
+                samesite="lax",
+                max_age=7 * 24 * 60 * 60,  # 7 days
+            )
             return ApiResponse(
                 success=True,
                 data=TokenResponse(
@@ -85,6 +132,15 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
                 raise HTTPException(status_code=401, detail="Invalid credentials")
             token = create_access_token(subject=str(mock["id"]), role=mock["role"])
             refresh = create_refresh_token(subject=str(mock["id"]))
+            # Set refresh token as httpOnly cookie
+            response.set_cookie(
+                key="refresh_token",
+                value=refresh,
+                httponly=True,
+                secure=True,
+                samesite="lax",
+                max_age=7 * 24 * 60 * 60,  # 7 days
+            )
             return ApiResponse(
                 success=True,
                 data=TokenResponse(
@@ -99,13 +155,15 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/register", response_model=ApiResponse, status_code=201)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
     """Register a new user account."""
     try:
         # Check for existing user
         existing = (await db.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
         if existing:
-            raise HTTPException(status_code=409, detail="Email already registered")
+            # SECURITY: Use generic error message to prevent email enumeration
+            # Don't reveal whether email exists; ask to try login or contact support
+            raise HTTPException(status_code=400, detail="Registration failed. If you already have an account, please log in.")
 
         user = User(
             email=body.email,
@@ -118,6 +176,15 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         await db.flush()
         token = create_access_token(subject=str(user.id), role=user.role)
         refresh = create_refresh_token(subject=str(user.id))
+        # Set refresh token as httpOnly cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=7 * 24 * 60 * 60,  # 7 days
+        )
         return ApiResponse(
             success=True,
             data={
@@ -137,7 +204,8 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         # Check if email already exists in mock users
         for u in _mock_users:
             if u["email"] == body.email:
-                raise HTTPException(status_code=409, detail="Email already registered")
+                # SECURITY: Use generic error message to prevent email enumeration
+                raise HTTPException(status_code=400, detail="Registration failed. If you already have an account, please log in.")
 
         # Add to mock users (note: no password stored, only for development)
         new_id = max(u["id"] for u in _mock_users) + 1
@@ -145,6 +213,15 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         _mock_users.append(new_user)
         token = create_access_token(subject=str(new_id), role="user")
         refresh = create_refresh_token(subject=str(new_id))
+        # Set refresh token as httpOnly cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=7 * 24 * 60 * 60,  # 7 days
+        )
         return ApiResponse(
             success=True,
             data={
@@ -156,7 +233,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/wx-login", response_model=ApiResponse)
-async def wx_login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def wx_login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     """WeChat mini-program login (code2Session flow).
 
     In production:
@@ -168,30 +245,84 @@ async def wx_login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     if not body.wechat_code:
         raise HTTPException(status_code=400, detail="wechat_code is required")
 
-    # In production: call WeChat API to exchange code for openid/session_key
-    # For now, simulate a successful login
-    token = create_access_token(subject="wx_user_001", role="user", extra={"openid": "mock_openid"})
-    refresh = create_refresh_token(subject="wx_user_001")
-    return ApiResponse(
-        success=True,
-        data=TokenResponse(
-            access_token=token, refresh_token=refresh, expires_in=900
-        ).model_dump(),
-        message="WeChat login successful",
-    )
+    # 调用微信 code2Session 接口验证 Code 的有效性
+    if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:
+        raise HTTPException(status_code=500, detail="WeChat configuration is missing")
+
+    async with httpx.AsyncClient() as client:
+        wx_response = await client.get(
+            f"https://api.weixin.qq.com/sns/jscode2session?"
+            f"appid={settings.WECHAT_APP_ID}&"
+            f"secret={settings.WECHAT_APP_SECRET}&"
+            f"js_code={body.wechat_code}&grant_type=authorization_code"
+        )
+
+        if wx_response.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid WeChat code")
+
+        session_data = wx_response.json()
+
+        # 检查微信 API 返回的错误
+        if "errcode" in session_data and session_data["errcode"] != 0:
+            error_msg = session_data.get("errmsg", "WeChat authentication failed")
+            raise HTTPException(status_code=401, detail=f"WeChat authentication failed: {error_msg}")
+
+        openid = session_data.get("openid")
+        if not openid:
+            raise HTTPException(status_code=401, detail="WeChat authentication failed")
+
+        # 查找或创建用户
+        # 这里简化处理，实际应用中应查询数据库是否存在该 openid 用户
+        # 如果不存在，则创建新用户
+
+        # 使用 openid 创建 JWT token
+        token = create_access_token(subject=openid, role="user", extra={"openid": openid})
+        refresh = create_refresh_token(subject=openid)
+
+        # Set refresh token as httpOnly cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=7 * 24 * 60 * 60,  # 7 days
+        )
+        return ApiResponse(
+            success=True,
+            data=TokenResponse(
+                access_token=token, refresh_token=refresh, expires_in=900
+            ).model_dump(),
+            message="WeChat login successful",
+        )
 
 
 @router.post("/refresh", response_model=ApiResponse)
-async def refresh(body: RefreshRequest):
-    """Refresh access token using a valid refresh token."""
+async def refresh(request: Request, response: Response):
+    """Refresh access token using a valid refresh token from httpOnly cookie."""
+    # Read refresh token from httpOnly cookie
+    refresh_token = request.cookies.get("refresh_token")
+
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Missing refresh token")
+
     try:
-        payload = decode_token(body.refresh_token)
+        payload = decode_token(refresh_token)
         if payload.get("type") != "refresh":
             raise HTTPException(status_code=400, detail="Invalid refresh token")
         sub = payload["sub"]
         role = payload.get("role", "user")
         new_access = create_access_token(subject=sub, role=role)
         new_refresh = create_refresh_token(subject=sub)
+        # Set new refresh token as httpOnly cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=new_refresh,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=7 * 24 * 60 * 60,  # 7 days
+        )
         return ApiResponse(
             success=True,
             data=TokenResponse(
@@ -205,6 +336,8 @@ async def refresh(body: RefreshRequest):
 
 
 @router.post("/logout", response_model=ApiResponse)
-async def logout():
+async def logout(response: Response):
     """Invalidate the current session (client-side token discard)."""
+    # Clear the refresh token cookie
+    response.delete_cookie(key="refresh_token")
     return ApiResponse(success=True, data={"message": "Logged out successfully"})

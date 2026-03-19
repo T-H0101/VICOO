@@ -7,6 +7,7 @@ import About from '@/pages/About';
 import Campaigns from '@/pages/Campaigns';
 import CampaignDetail from '@/pages/CampaignDetail';
 import Stories from '@/pages/Stories';
+import ArtworkDetail from '@/pages/ArtworkDetail';
 import Donate from '@/pages/Donate';
 import Shop from '@/pages/Shop';
 import ProductDetail from '@/pages/ProductDetail';
@@ -28,6 +29,7 @@ function AnimatedRoutes() {
             <Route path="campaigns" element={<ErrorBoundary><Campaigns /></ErrorBoundary>} />
             <Route path="campaigns/:id" element={<ErrorBoundary><CampaignDetail /></ErrorBoundary>} />
             <Route path="stories" element={<ErrorBoundary><Stories /></ErrorBoundary>} />
+            <Route path="artworks/:id" element={<ErrorBoundary><ArtworkDetail /></ErrorBoundary>} />
             <Route path="donate" element={<ErrorBoundary><Donate /></ErrorBoundary>} />
             <Route path="shop" element={<ErrorBoundary><Shop /></ErrorBoundary>} />
             <Route path="shop/:id" element={<ErrorBoundary><ProductDetail /></ErrorBoundary>} />

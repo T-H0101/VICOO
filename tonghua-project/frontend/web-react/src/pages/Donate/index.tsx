@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import PageWrapper from '@/components/layout/PageWrapper';
@@ -7,6 +8,7 @@ import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeadin
 import StoryQuoteBlock from '@/components/editorial/StoryQuoteBlock';
 import DonationPanel from '@/components/editorial/DonationPanel';
 import ImpactCounter from '@/components/editorial/ImpactCounter';
+import { donationsApi } from '@/services/donations';
 
 const IMPACT_AREAS = [
   { key: 'artSupplies', pct: 40 },
@@ -17,6 +19,32 @@ const IMPACT_AREAS = [
 
 export default function Donate() {
   const { t } = useTranslation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleDonate = async (data: {
+    amount: number;
+    frequency: 'once' | 'monthly';
+    anonymous: boolean;
+    message: string;
+  }) => {
+    setIsSubmitting(true);
+    try {
+      await donationsApi.create({
+        amount: data.amount,
+        currency: 'CNY',
+        anonymous: data.anonymous,
+        message: data.message,
+        frequency: data.frequency,
+      });
+      console.log('Donation successful');
+      // Handle success (e.g., show confirmation, redirect)
+    } catch (error) {
+      console.error('Donation failed:', error);
+      // Handle error (e.g., show error message)
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <PageWrapper>
@@ -70,7 +98,10 @@ export default function Donate() {
 
           {/* Right: Donation panel */}
           <div className="md:col-span-7">
-            <DonationPanel />
+            <DonationPanel
+              onSubmit={handleDonate}
+              isSubmitting={isSubmitting}
+            />
           </div>
         </div>
       </SectionContainer>

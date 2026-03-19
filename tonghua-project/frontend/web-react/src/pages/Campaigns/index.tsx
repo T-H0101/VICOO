@@ -8,6 +8,7 @@ import SectionContainer from '@/components/layout/SectionContainer';
 import EditorialHero from '@/components/editorial/EditorialHero';
 import NumberedSectionHeading from '@/components/editorial/NumberedSectionHeading';
 import SepiaImageFrame from '@/components/editorial/SepiaImageFrame';
+import VintageInput from '@/components/editorial/VintageInput';
 import { campaignsApi } from '@/services/campaigns';
 import type { Campaign } from '@/types';
 
@@ -178,22 +179,18 @@ export default function Campaigns() {
         />
 
         {/* Search bar */}
-        <div className="mb-8">
-          <div className="flex items-center border-b border-warm-gray/40 focus-within:border-rust transition-colors max-w-md">
-            <svg className="w-4 h-4 text-sepia-mid mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder={t('campaigns.search.placeholder')}
-              className="flex-1 font-body text-sm bg-transparent py-3 pr-4 focus:outline-none text-ink placeholder:text-warm-gray"
-            />
-          </div>
+        <div className="mb-8 max-w-md">
+          <VintageInput
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder={t('campaigns.search.placeholder')}
+            icon="search"
+            className="py-2"
+          />
         </div>
 
         {/* Filter tabs */}

@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     # WeChat
     WECHAT_APP_ID: Optional[str] = None
     WECHAT_APP_SECRET: Optional[str] = None
+    WECHAT_MCH_ID: Optional[str] = None  # WeChat Pay Merchant ID
     WECHAT_PAY_API_KEY: Optional[str] = None  # WeChat Pay API key
     WECHAT_NOTIFY_URL: Optional[str] = None  # WeChat Pay callback URL
 

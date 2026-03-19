@@ -294,6 +294,15 @@
     "copyright": "© 2026 童画公益。保留所有权利。",
     "issueNo": "第01期 — 创刊号"
   },
+  "artwork": {
+    "detail": {
+      "heading": "作品详情",
+      "artist": "创作者",
+      "vote": "为作品投票",
+      "votes": "票",
+      "tags": "标签"
+    }
+  },
   "common": {
     "loading": "加载中...",
     "error": "发生错误",
