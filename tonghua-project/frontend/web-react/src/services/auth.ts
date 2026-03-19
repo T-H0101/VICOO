@@ -18,6 +18,21 @@ export interface AuthResponse {
   refreshToken: string;
 }
 
+/**
+ * HTTP-Only Cookie Authentication Strategy:
+ * - Access tokens are stored in memory (reactive store state)
+ * - Refresh tokens are stored in httpOnly cookies set by the server
+ * - The API interceptor (api.ts) automatically handles token refresh on 401 errors
+ * - Do NOT manually inject tokens into request bodies or headers
+ *
+ * Token refresh flow:
+ * 1. Client makes a request with expired access token in memory
+ * 2. Server returns 401 Unauthorized
+ * 3. Interceptor catches 401 and sends a POST to /auth/refresh WITH credentials (cookies)
+ * 4. Server validates the httpOnly refresh token cookie and issues new tokens
+ * 5. New tokens are stored (access token in memory, refresh token in new cookie)
+ * 6. Original request is retried with the new access token
+ */
 export const authApi = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/auth/login', data);
@@ -31,6 +46,7 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     await api.post('/auth/logout');
+    // Note: Tokens are cleared from memory by useAuthStore after this call
   },
 
   getProfile: async (): Promise<User> => {
@@ -38,10 +54,6 @@ export const authApi = {
     return response.data;
   },
 
-  refreshToken: async (
-    refreshToken: string
-  ): Promise<{ accessToken: string; refreshToken: string }> => {
-    const response = await api.post('/auth/refresh', { refreshToken });
-    return response.data;
-  },
+  // REMOVED: Legacy method that injected token in request body
+  // The correct approach uses httpOnly cookies managed by api.ts interceptor
 };

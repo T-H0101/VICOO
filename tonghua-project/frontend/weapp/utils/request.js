@@ -32,14 +32,14 @@ function request(options) {
         'X-Timestamp': Date.now().toString(),
         'X-Nonce': generateNonce()
       },
-      withCredentials: true, // Use httpOnly Cookie authentication
+      // WeChat runtime automatically manages httpOnly Cookie authentication
       success: function(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(res.data);
         } else if (res.statusCode === 401) {
           // Session expired - redirect to login
           if (options._refreshAttempted) {
-            wx.navigateTo({ url: '/pages/user/login/index' });
+            wx.navigateTo({ url: '/pages/user/index' });
             reject(new Error('Session expired. Please log in again.'));
             return;
           }
@@ -95,7 +95,7 @@ function upload(url, filePath, name, formData) {
         'X-Timestamp': Date.now().toString(),
         'X-Nonce': generateNonce()
       },
-      withCredentials: true, // Use httpOnly Cookie authentication
+      // WeChat runtime automatically manages httpOnly Cookie authentication
       success: function(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try {
@@ -111,7 +111,7 @@ function upload(url, filePath, name, formData) {
           }
         } else if (res.statusCode === 401) {
           // Session expired - redirect to login
-          wx.navigateTo({ url: '/pages/user/login/index' });
+          wx.navigateTo({ url: '/pages/user/index' });
           reject(new Error('Session expired. Please log in again.'));
         } else {
           var msg = 'Upload failed: ' + res.statusCode;

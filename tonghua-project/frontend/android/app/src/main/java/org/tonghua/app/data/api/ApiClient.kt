@@ -83,7 +83,9 @@ class AndroidCookieJar(private val context: Context) : CookieJar {
     private val cookieKey = "stored_cookies"
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        val serialized = cookies.joinToString(";") { it.toString() }
+        // Use newline as delimiter since it doesn't appear in cookie strings
+        // Each cookie is serialized as a single line
+        val serialized = cookies.joinToString("\n") { it.toString() }
         prefs.edit().putString(cookieKey, serialized).apply()
     }
 
@@ -91,10 +93,14 @@ class AndroidCookieJar(private val context: Context) : CookieJar {
         val serialized = prefs.getString(cookieKey, "") ?: ""
         if (serialized.isEmpty()) return emptyList()
 
-        return serialized.split(";").mapNotNull { cookieStr ->
-            try {
-                Cookie.parse(url, cookieStr.trim())
-            } catch (e: Exception) {
+        return serialized.split("\n").mapNotNull { cookieStr ->
+            if (cookieStr.trim().isNotEmpty()) {
+                try {
+                    Cookie.parse(url, cookieStr.trim())
+                } catch (e: Exception) {
+                    null
+                }
+            } else {
                 null
             }
         }

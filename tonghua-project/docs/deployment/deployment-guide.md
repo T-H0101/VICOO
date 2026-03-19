@@ -61,14 +61,25 @@ cd deploy/docker
 cp .env.example .env
 ```
 
-Edit `.env` and replace all `change-me` values with your local credentials. For development, the defaults in `docker-compose.yml` are sufficient for most services. The critical values to set:
+**Critical Security Note**: As of the security update, `docker-compose.yml` no longer contains any default secrets. All environment variables must be explicitly set in your `.env` file. Docker Compose will fail to start if any required secret is missing.
+
+The following values must be set for local development:
 
 ```dotenv
-# Minimum required for local development
+# Required secrets - no defaults allowed
+MYSQL_ROOT_PASSWORD=<secure-password>
+MYSQL_PASSWORD=<secure-password>
+REDIS_PASSWORD=<secure-password>
+RABBITMQ_PASSWORD=<secure-password>
 APP_SECRET_KEY=<generate-a-random-string>
 JWT_SECRET_KEY=<generate-a-random-string>
 ENCRYPTION_KEY=<64-char-hex-string>
 CHILD_DATA_ENCRYPTION_KEY=<64-char-hex-string>
+
+# Optional but recommended
+MYSQL_USER=tonghua
+MYSQL_DATABASE=tonghua_db
+RABBITMQ_USER=tonghua
 ```
 
 Generate secure random values:

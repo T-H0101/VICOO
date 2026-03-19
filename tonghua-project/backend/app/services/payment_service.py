@@ -20,7 +20,10 @@ class WeChatPayService:
         if not settings.WECHAT_PAY_API_KEY:
             raise ValueError("WECHAT_PAY_API_KEY environment variable is required for payment security")
         self.api_key = settings.WECHAT_PAY_API_KEY
-        self.notify_url = f"{settings.CORS_ORIGINS[0]}/payments/wechat-notify" if settings.CORS_ORIGINS else "http://localhost:8000/payments/wechat-notify"
+        # Use dedicated WeChat Pay notification URL, not CORS origins
+        if not settings.WECHAT_NOTIFY_URL:
+            raise ValueError("WECHAT_NOTIFY_URL environment variable is required for payment notifications")
+        self.notify_url = settings.WECHAT_NOTIFY_URL
 
     def generate_nonce_str(self) -> str:
         """Generate random nonce string."""

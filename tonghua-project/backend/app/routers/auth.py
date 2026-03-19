@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,15 +74,13 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         pass
 
     # ── Mock fallback (development only) ──
-    # Note: This fallback is only for development when database is unavailable.
-    # It simply checks if the email exists in mock users without password verification.
-    # In production, this should never be reached because database lookup should succeed.
-    mock = _get_mock_user(body.email)
-    if mock:
-        # Development-only: accept any password for mock users
-        # In production, this branch should not be reached
-        import os
-        if os.getenv("APP_ENV", "development") == "development":
+    # Only use mock users in explicit development mode
+    if os.getenv("APP_ENV") == "development":
+        mock = _get_mock_user(body.email)
+        if mock:
+            # Still validate password even for mock users
+            if mock.get("password", "password") != body.password:
+                raise HTTPException(status_code=401, detail="Invalid credentials")
             token = create_access_token(subject=str(mock["id"]), role=mock["role"])
             refresh = create_refresh_token(subject=str(mock["id"]))
             return ApiResponse(
@@ -90,6 +90,9 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
                 ).model_dump(),
                 message="Warning: Using development mock user",
             )
+    else:
+        # Production: no mock fallback, strict authentication
+        pass
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 

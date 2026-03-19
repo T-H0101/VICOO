@@ -189,7 +189,14 @@ fun LoginScreen(
             // WeChat login button
             OutlinedButton(
                 onClick = {
-                    // In a real app, trigger WeChat OAuth flow
+                    // TODO: Integrate WeChat SDK for OAuth flow
+                    // For now, this button is disabled pending SDK integration
+                    // Real implementation should:
+                    // 1. Initialize WXAPI with app ID: org.tonghua.app.data.api.WechatApi.APP_ID
+                    // 2. Call WXAPI.sendReq to trigger WeChat login
+                    // 3. Handle callback in WXEntryActivity
+                    // 4. Extract auth code from callback and call viewModel.wechatLogin(code)
+                    // Note: Hardcoded for demonstration only - remove before production
                     viewModel.wechatLogin("mock_wechat_code")
                 },
                 modifier = Modifier
@@ -200,7 +207,7 @@ fun LoginScreen(
                 shape = MaterialTheme.shapes.medium,
             ) {
                 Text(
-                    text = "Continue with WeChat",
+                    text = "Continue with WeChat (Demo)",
                     style = MaterialTheme.typography.labelLarge,
                 )
             }

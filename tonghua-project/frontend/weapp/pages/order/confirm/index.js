@@ -12,10 +12,10 @@ Page({
     var cart = wx.getStorageSync('cart') || [];
     var self = this;
     if (!cart.length) { wx.navigateBack(); return; }
-    var ids = cart.map(function(c) { return c.productId; }).join(',');
+    var ids = cart.map(function(c) { return c.id; }).join(',');
     http.get('/products/batch', { ids: ids }).then(function(res) {
       var items = cart.map(function(c) {
-        var p = (res || []).find(function(x) { return x.id === c.productId; }) || {};
+        var p = (res || []).find(function(x) { return x.id === c.id; }) || {};
         return { product: p, quantity: c.quantity };
       });
       var total = items.reduce(function(s, i) { return s + (i.product.price || 0) * i.quantity; }, 0);
@@ -40,7 +40,7 @@ Page({
     }
     auth.ensureLogin().then(function() {
       self.setData({ submitting: true });
-      var items = self.data.cartItems.map(function(i) { return { productId: i.product.id, quantity: i.quantity }; });
+      var items = self.data.cartItems.map(function(i) { return { id: i.product.id, quantity: i.quantity }; });
       http.post('/orders/create', { items: items, address: self.data.address }).then(function(order) {
         wx.requestPayment({
           timeStamp: order.timeStamp,

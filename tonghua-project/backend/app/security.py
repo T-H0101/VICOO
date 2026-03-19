@@ -37,7 +37,15 @@ def create_access_token(subject: str, role: str = "user", extra: dict | None = N
     }
     if extra:
         payload.update(extra)
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+    # Select signing key based on algorithm
+    if settings.JWT_ALGORITHM == "HS256":
+        signing_key = settings.APP_SECRET_KEY
+    else:
+        # RSA, EC, etc. require private key
+        signing_key = settings.JWT_PRIVATE_KEY
+
+    return jwt.encode(payload, signing_key, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_refresh_token(subject: str) -> str:
@@ -47,12 +55,27 @@ def create_refresh_token(subject: str) -> str:
         "iat": _now_utc(),
         "exp": _now_utc() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+    # Select signing key based on algorithm
+    if settings.JWT_ALGORITHM == "HS256":
+        signing_key = settings.APP_SECRET_KEY
+    else:
+        # RSA, EC, etc. require private key
+        signing_key = settings.JWT_PRIVATE_KEY
+
+    return jwt.encode(payload, signing_key, algorithm=settings.JWT_ALGORITHM)
 
 
 def decode_token(token: str) -> dict:
     """Decode a JWT token; raises JWTError on failure."""
-    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    # Select verification key based on algorithm
+    if settings.JWT_ALGORITHM == "HS256":
+        verify_key = settings.APP_SECRET_KEY
+    else:
+        # RSA, EC, etc. require public key for verification
+        verify_key = settings.JWT_PUBLIC_KEY
+
+    return jwt.decode(token, verify_key, algorithms=[settings.JWT_ALGORITHM])
 
 
 # ── AES-256-GCM helpers ──────────────────────────────────────────

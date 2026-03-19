@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import engine, Base
+from app.database import engine, Base, AsyncSessionLocal
+from app.deps import rate_limit_check, get_current_user_from_request
 
 logger = logging.getLogger("tonghua")
 logging.basicConfig(
@@ -44,6 +45,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Rate Limiting middleware (applied before logging) ────────────
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # Apply rate limiting (skip for health check endpoint)
+    if request.url.path != "/health":
+        try:
+            # Create DB session for user extraction
+            async with AsyncSessionLocal() as db:
+                current_user = await get_current_user_from_request(request, db)
+                await rate_limit_check(request, current_user)
+        except Exception:
+            # If rate limiting fails, let the request continue (fails open)
+            pass
+    response = await call_next(request)
+    return response
 
 
 # ── Request logging middleware ───────────────────────────────────

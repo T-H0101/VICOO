@@ -95,8 +95,19 @@ async def update_me(
 
 
 @router.get("/{user_id}", response_model=ApiResponse)
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    """Get a user by ID."""
+async def get_user(user_id: int, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """Get a user by ID.
+
+    Security: Only admins or the user themselves can access user details.
+    Prevents IDOR (Insecure Direct Object Reference) attacks.
+    """
+    # Authorization check: only admin or user themselves can access
+    if current_user.get("role") != "admin" and current_user.get("id") != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. You can only view your own profile or must be an administrator."
+        )
+
     try:
         stmt = select(User).where(User.id == user_id)
         result = await db.execute(stmt)

@@ -104,26 +104,19 @@ Page({
       guardian_consent: 'true'
     }
 
-    // Mock upload success
-    setTimeout(function () {
-      that.setData({ submitting: false })
-      wx.showToast({ title: '上传成功，等待审核', icon: 'success', duration: 2000 })
-      setTimeout(function () {
-        wx.navigateBack()
-      }, 2000)
-    }, 1000)
-
-    // Real upload (uncomment when backend is ready):
-    // var uploadFile = require('../../utils/request').uploadFile
-    // uploadFile(that.data.imagePath, '/artworks', 'image', formData)
-    //   .then(function() {
-    //     that.setData({ submitting: false })
-    //     wx.showToast({ title: '上传成功', icon: 'success' })
-    //     setTimeout(function() { wx.navigateBack() }, 1500)
-    //   })
-    //   .catch(function(err) {
-    //     that.setData({ submitting: false })
-    //     wx.showToast({ title: err.message || '上传失败', icon: 'none' })
-    //   })
+    // Real upload
+    var request = require('../../utils/request')
+    request.upload('/artworks/upload', that.data.imagePath, 'image', formData)
+      .then(function(res) {
+        that.setData({ submitting: false })
+        wx.showToast({ title: '上传成功，等待审核', icon: 'success', duration: 2000 })
+        setTimeout(function () {
+          wx.navigateBack()
+        }, 2000)
+      })
+      .catch(function(err) {
+        that.setData({ submitting: false })
+        wx.showToast({ title: err.message || '上传失败', icon: 'none' })
+      })
   }
 })

@@ -11,10 +11,10 @@ Page({
     var self = this;
     var cart = wx.getStorageSync('cart') || [];
     if (!cart.length) { self.setData({ cartItems: [], products: [], loading: false }); return; }
-    var ids = cart.map(function(c) { return c.productId; }).join(',');
+    var ids = cart.map(function(c) { return c.id; }).join(',');
     http.get('/products/batch', { ids: ids }).then(function(res) {
       var items = cart.map(function(c) {
-        var product = (res || []).find(function(p) { return p.id === c.productId; }) || {};
+        var product = (res || []).find(function(p) { return p.id === c.id; }) || {};
         return { product: product, quantity: c.quantity };
       });
       self.setData({ cartItems: items, loading: false });
@@ -36,7 +36,7 @@ Page({
     this.saveCart();
   },
   saveCart: function() {
-    var cart = this.data.cartItems.map(function(i) { return { productId: i.product.id, quantity: i.quantity }; });
+    var cart = this.data.cartItems.map(function(i) { return { id: i.product.id, quantity: i.quantity }; });
     wx.setStorageSync('cart', cart);
   },
   getTotal: function() {
