@@ -45,7 +45,7 @@ export const EditorialCard = ({
         delay: index * 0.08,
       }}
       className={`
-        relative bg-paper border-2 border-ink/15
+        relative bg-paper border-2 border-rust/30
         ${hoverClasses[hoverEffect]}
         transition-all duration-300 ease-out
         ${onClick ? 'cursor-pointer' : ''}
@@ -53,20 +53,34 @@ export const EditorialCard = ({
       `}
       onClick={onClick}
     >
+      {/* Grain overlay */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none opacity-[0.08]"
+        style={{
+          backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\\'0 0 200 200\\' xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Cfilter id=\\'noiseFilter\\'%3E%3CfeTurbulence type=\\'fractalNoise\\' baseFrequency=\\'0.9\\' numOctaves=\\'4\\' stitchTiles=\\'stitch\\'/%3E%3C/filter%3E%3Crect width=\\'100%25\\' height=\\'100%25\\' filter=\\'url(%23noiseFilter)\\'/%3E%3C/svg%3E")'
+        }}
+      />
       {/* Decorative corner accents */}
-      <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-ink/20" />
-      <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-ink/20" />
-      <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-ink/20" />
-      <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-ink/20" />
+      <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-rust/30 z-10" />
+      <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-rust/30 z-10" />
+      <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-rust/30 z-10" />
+      <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-rust/30 z-10" />
 
       {/* Image section */}
       {image && (
-        <div className="relative aspect-[4/3] overflow-hidden border-b border-ink/10">
+        <div className="relative aspect-[4/3] overflow-hidden border-b-2 border-rust/30">
+          {/* Grain overlay for image */}
+          <div
+            className="absolute inset-0 z-10 pointer-events-none opacity-10"
+            style={{
+              backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\\'0 0 200 200\\' xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Cfilter id=\\'noiseFilter\\'%3E%3CfeTurbulence type=\\'fractalNoise\\' baseFrequency=\\'0.9\\' numOctaves=\\'4\\' stitchTiles=\\'stitch\\'/%3E%3C/filter%3E%3Crect width=\\'100%25\\' height=\\'100%25\\' filter=\\'url(%23noiseFilter)\\'/%3E%3C/svg%3E")'
+            }}
+          />
           <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-br from-pale-gold/5 via-transparent to-archive-brown/5" />
           <img
             src={image}
             alt={imageAlt || title}
-            className="w-full h-full object-cover sepia-[0.05] transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover sepia-[0.08] transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
         </div>

@@ -21,7 +21,7 @@ export const VintageInput = forwardRef<HTMLInputElement | HTMLTextAreaElement, V
       border-b-2 border-warm-gray/60
       bg-transparent
       transition-all duration-300 ease-editorial
-      placeholder:text-sepia-mid/50
+      placeholder:text-ink-faded/80
       focus:outline-none
       focus:border-rust
       ${error ? 'border-archive-brown' : ''}

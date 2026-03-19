@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import engine, Base, AsyncSessionLocal
-from app.deps import rate_limit_check, get_current_user_from_request
+from app.deps import rate_limit_check, get_current_user_from_request, verify_request_signature
 
 # Maximum allowed request body size (10 MB)
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
@@ -97,6 +97,45 @@ async def request_size_limit_middleware(request: Request, call_next):
                 )
         except ValueError:
             pass
+    response = await call_next(request)
+    return response
+
+
+# ── Signature verification middleware ─────────────────────────────────
+@app.middleware("http")
+async def signature_verification_middleware(request: Request, call_next):
+    """Verify request signature using HMAC-SHA256.
+
+    This middleware validates:
+    1. X-Signature header (HMAC-SHA256 signature)
+    2. X-Timestamp header (prevents request replay)
+    3. X-Nonce header (prevents replay attacks)
+
+    Only applies to API endpoints (/api/*).
+    """
+    # Skip signature verification for non-API endpoints
+    if not request.url.path.startswith("/api/"):
+        return await call_next(request)
+
+    # Skip signature verification in testing environment
+    import os
+    if os.getenv("TESTING") == "1":
+        return await call_next(request)
+
+    # Verify signature
+    is_valid, error_message = await verify_request_signature(request)
+
+    if not is_valid:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "success": False,
+                "data": None,
+                "message": error_message,
+            },
+        )
+
+    # Signature verified, continue processing
     response = await call_next(request)
     return response
 

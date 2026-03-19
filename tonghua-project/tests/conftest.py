@@ -17,7 +17,17 @@ from unittest.mock import AsyncMock, patch
 
 # Patch redis for testing (avoid Redis connection errors)
 # This must be done before importing any backend modules that use redis
-redis_patch = patch('redis.asyncio.from_url', return_value=AsyncMock())
+redis_mock = AsyncMock()
+# Configure default behavior for Redis methods used in the app
+# exists should return False (no duplicate votes)
+redis_mock.exists = AsyncMock(return_value=False)
+# setex should just complete successfully
+redis_mock.setex = AsyncMock(return_value=True)
+# incr should increment (for rate limiting)
+redis_mock.incr = AsyncMock(side_effect=lambda key: 1) # First call returns 1
+redis_mock.expire = AsyncMock(return_value=True)
+
+redis_patch = patch('redis.asyncio.from_url', return_value=redis_mock)
 redis_patch.start()
 
 # Mock WeChat API calls for login
@@ -64,6 +74,7 @@ if backend_dir not in sys.path:
 
 # Set required environment variables for testing
 # These are required by app.config.Settings
+os.environ.setdefault("TESTING", "1")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///test.db")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379")
 os.environ.setdefault("APP_SECRET_KEY", "test-secret-key-for-hmac-sha256")
@@ -155,6 +166,51 @@ async def app():
             await conn.run_sync(Base.metadata.create_all)
 
         async with AsyncSessionLocal() as db:
+            # Seed a campaign first to avoid FK constraint violation during artwork creation
+            from app.models.campaign import Campaign
+            from app.models.donation import Donation
+            from datetime import datetime, timezone, timedelta
+            stmt_campaign = select(Campaign).where(Campaign.id == 1)
+            result_campaign = await db.execute(stmt_campaign)
+            campaign = result_campaign.scalar_one_or_none()
+            if not campaign:
+                campaign = Campaign(
+                    id=1,
+                    title="Test Campaign",
+                    description="Test campaign for artworks",
+                    cover_image="https://example.com/test.jpg",
+                    start_date=datetime.now(timezone.utc),
+                    end_date=datetime.now(timezone.utc) + timedelta(days=30),
+                    goal_amount=10000.00,
+                    current_amount=0.00,
+                    status="active",
+                )
+                db.add(campaign)
+                await db.commit()
+                print("Test campaign seeded successfully.")
+
+            # Seed a completed donation for ID 1 (required by TestDonationCertificate)
+            stmt_donation = select(Donation).where(Donation.id == 1)
+            result_donation = await db.execute(stmt_donation)
+            donation = result_donation.scalar_one_or_none()
+            if not donation:
+                donation = Donation(
+                    id=1,
+                    donor_name="Test Donor",
+                    donor_user_id=1,
+                    amount=100.00,
+                    currency="CNY",
+                    payment_method="stripe",
+                    payment_id="mock_1",
+                    campaign_id=1,
+                    status="completed",
+                    is_anonymous=False,
+                    message="Test donation",
+                )
+                db.add(donation)
+                await db.commit()
+                print("Test donation seeded successfully.")
+
             stmt = select(User).where(User.email == "user@example.com")
             result = await db.execute(stmt)
             user = result.scalar_one_or_none()

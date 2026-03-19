@@ -196,11 +196,15 @@ export default function Campaigns() {
         {/* Filter tabs */}
         <div className="flex items-center gap-1 mb-12 border-b border-warm-gray/30 overflow-x-auto">
           {statuses.map((status, index) => (
-            <button
+            <motion.button
               key={status}
               onClick={() => handleFilterChange(status)}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ y: -2 }}
               className={`
-                font-body text-xs tracking-[0.15em] uppercase px-4 py-3 transition-all duration-200 border-b-2 -mb-px whitespace-nowrap
+                font-body text-xs tracking-[0.15em] uppercase px-4 py-3 transition-all duration-200 border-b-2 -mb-px whitespace-nowrap relative
                 ${filter === status
                   ? 'border-rust text-rust'
                   : 'border-transparent text-sepia-mid hover:text-ink'
@@ -213,7 +217,14 @@ export default function Campaigns() {
               {status === 'all'
                 ? t('campaigns.filter.all')
                 : t(`campaigns.status.${status}`)}
-            </button>
+              {filter === status && (
+                <motion.span
+                  layoutId="campaign-category-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-px bg-rust"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+            </motion.button>
           ))}
         </div>
 

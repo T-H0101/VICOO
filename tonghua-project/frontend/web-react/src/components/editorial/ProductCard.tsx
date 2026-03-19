@@ -32,12 +32,12 @@ export default function ProductCard({
     >
       <Link to={`/shop/${product.id}`} className="block">
         {/* Image */}
-        <div className="relative aspect-[3/4] overflow-hidden border-2 border-ink/20 bg-aged-stock mb-5 group-hover:border-ink/40 transition-colors duration-300">
+        <div className="relative aspect-[3/4] overflow-hidden border-2 border-rust/30 bg-aged-stock mb-5 group-hover:border-rust/50 transition-colors duration-300">
           {/* Vintage frame effect */}
           <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-br from-pale-gold/3 via-transparent to-archive-brown/5" />
 
           {/* Grain overlay */}
-          <div className="absolute inset-0 z-20 pointer-events-none opacity-20"
+          <div className="absolute inset-0 z-20 pointer-events-none opacity-10"
                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
 
           <img

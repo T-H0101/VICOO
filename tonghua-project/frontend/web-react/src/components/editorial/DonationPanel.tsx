@@ -124,12 +124,19 @@ export default function DonationPanel({
           <label className="block font-body text-xs tracking-[0.05em] text-sepia-mid mb-3">
             {t('donate.form.frequency.title')}
           </label>
-          <div className="flex">
+          <div className="flex" role="group" aria-label={t('donate.form.frequency.title')}>
             {(['once', 'monthly'] as const).map((freq) => (
               <button
                 key={freq}
                 type="button"
+                aria-pressed={frequency === freq}
                 onClick={() => setFrequency(freq)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setFrequency(freq);
+                  }
+                }}
                 className={`
                   flex-1 py-3 font-body text-xs tracking-[0.05em] uppercase text-center border transition-all cursor-pointer
                   ${freq === 'once' ? 'border-r-0' : ''}
